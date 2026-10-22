@@ -1,0 +1,13 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType><TargetFramework>net8.0-windows</TargetFramework>
+    <UseWindowsForms>true</UseWindowsForms><ApplicationHighDpiMode>PerMonitorV2</ApplicationHighDpiMode>
+    <RuntimeIdentifier>win-x64</RuntimeIdentifier><SelfContained>true</SelfContained>
+    <PublishSingleFile>true</PublishSingleFile><IncludeNativeLibrariesForSelfExtract>true</IncludeNativeLibrariesForSelfExtract>
+    <EnableCompressionInSingleFile>true</EnableCompressionInSingleFile>
+    <ApplicationIcon>..\BetterMalodyV.Windows\Assets\mtp.ico</ApplicationIcon>
+  </PropertyGroup>
+  <ItemGroup><ProjectReference Include="..\BetterMalodyV.Windows\BetterMalodyV.Windows.csproj" /></ItemGroup>
+  <ItemGroup><PackageReference Include="Markdig" Version="0.41.3" /></ItemGroup>
+  <ItemGroup><EmbeddedResource Include="..\..\docs\FEATURES.md" LogicalName="BetterMalodyV.FEATURES.md" /></ItemGroup>
+</Project>

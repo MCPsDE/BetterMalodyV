@@ -1,0 +1,9 @@
+BetterMalodyV reuses the installer and Windows UI design/code of MalodyVThemeLoader (MCPsDE), at the author's request.
+BepInEx 6.0.0-be.785 (LGPL-2.1): https://github.com/BepInEx/BepInEx
+Il2CppInterop (LGPL-3.0): https://github.com/BepInEx/Il2CppInterop
+HarmonyX (MIT): https://github.com/BepInEx/HarmonyX
+Markdig (BSD-2-Clause): https://github.com/xoofx/markdig
+.NET runtime (MIT): https://github.com/dotnet/runtime
+Bundled game interop assemblies contain generated bindings to the locally installed game, not game assets.
+The application icon is the user-provided BetterMalodyV.jpg with its outside black background removed.
+See licenses/ for the bundled dependency license texts.

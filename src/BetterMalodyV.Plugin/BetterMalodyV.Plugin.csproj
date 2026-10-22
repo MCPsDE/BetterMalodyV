@@ -1,0 +1,27 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net6.0</TargetFramework><AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <RestoreAdditionalProjectSources>https://api.nuget.org/v3/index.json;https://nuget.bepinex.dev/v3/index.json;https://nuget.samboy.dev/v3/index.json</RestoreAdditionalProjectSources>
+    <GameInteropRoot Condition="'$(GameInteropRoot)' == ''">$(MSBuildThisFileDirectory)..\..\generated\game-libs</GameInteropRoot>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="BepInEx.Unity.IL2CPP" Version="6.0.0-be.785" IncludeAssets="compile" />
+    <ProjectReference Include="..\BetterMalodyV.Shared\BetterMalodyV.Shared.csproj" />
+    <Reference Include="$(GameInteropRoot)\Assembly-CSharp.dll" Private="false" />
+    <Reference Include="$(GameInteropRoot)\Framework.dll" Private="false" />
+    <Reference Include="$(GameInteropRoot)\Protocol.dll" Private="false" />
+    <Reference Include="$(GameInteropRoot)\Il2Cppmscorlib.dll" Private="false" />
+    <Reference Include="$(GameInteropRoot)\Il2CppSystem.dll" Private="false" />
+    <Reference Include="$(GameInteropRoot)\Il2CppSystem.Core.dll" Private="false" />
+    <Reference Include="$(GameInteropRoot)\UnityEngine.CoreModule.dll" Private="false" />
+    <Reference Include="$(GameInteropRoot)\UnityEngine.UI.dll" Private="false" />
+    <Reference Include="$(GameInteropRoot)\Unity.TextMeshPro.dll" Private="false" />
+    <Reference Include="$(GameInteropRoot)\UnityEngine.UIModule.dll" Private="false" />
+  </ItemGroup>
+  <PropertyGroup Condition="'$(RuntimeVerification)' == 'true'"><DefineConstants>$(DefineConstants);BETTER_MALODYV_VERIFY</DefineConstants></PropertyGroup>
+  <ItemGroup Condition="'$(RuntimeVerification)' == 'true'">
+    <Compile Include="..\..\tests\RuntimeVerification.cs" Link="RuntimeVerification.cs" />
+    <Reference Include="$(GameInteropRoot)\UnityEngine.ScreenCaptureModule.dll" Private="false" />
+    <Reference Include="$(GameInteropRoot)\UnityEngine.ImageConversionModule.dll" Private="false" />
+  </ItemGroup>
+</Project>

@@ -1,0 +1,21 @@
+# Documentation handoff
+
+The shipped WinForms artifact was documented against `PRODUCT.md`, the user's reuse contract and the read-only reference `E:\Desktop\MalodyVThemeLoader\DESIGN.md`. Extracted sources: `AppVisuals.cs`, `ActionButton.cs`, `ButtonRow.cs`, `BrandBar.cs`, `AppearanceToggle.cs`, `AppAppearance.cs`, `AppearancePreferences.cs`, `WindowsBackdrop.cs`, `ManagerForm.cs`, `MarkdownView.cs`, `InstallerForm.cs` and the separate native `SearchFilterUi.cs`.
+
+`DESIGN.md` owns source-backed palette, point-based typography, spacing and component tokens. `.impeccable/design.json` adds narrative and illustrative browser translations of native components; those snippets are documentation previews, not application code or an assertion that a browser rendered the application. Its generated tonal ramps are panel swatch aids, not additional shipped palette tokens. `.impeccable/briefs/desktop.md` owns the manager's Read and installer's Operate strategies.
+
+## Evidence and disposition
+
+- The 16 `manager-{dark|light}-{960|704}-{1|1.25|1.5|2}.png` images cover both appearances, normal/minimum width cases and synthetic scale factors. The 704 filename identifies the captured minimum client-width case, not a replacement for the form's 720 px minimum outer-window setting.
+- The eight `installer-{normal|minimum}-{1|1.25|1.5|2}.png` images cover the fixed-light installer. These 24 matrix captures use DrawToBitmap. A native-scrollbar painting artifact at minimum size limits what they establish about native viewport clipping.
+- `installer-minimum-native.png` is an actual OS window capture. It resolves the initial review's material clipping finding by showing the native content viewport clipping correctly while operation status and commands remain visible. The verdict's ship disposition is scoped to this resolved finding; it is not proof of every runtime or platform condition.
+- `checks.txt` and `installer-checks.txt` record passing full-label measurements for the captured command rows. Source review confirms shared single-line text measurement and row reflow. The files do not establish every possible localization or physical monitor configuration.
+- `artifacts/native-test/search-filter-fixture.png` shows the isolated native IL2CPP search controls using synthetic data and the English font fallback. `artifacts/native-test/result.json` reports 35 passing checks, including status combinations, matching the same chart's mode and status, restoring display lists, observing cached status changes, native toggles, persistence and All reset. This does not validate an actual full lobby/room workflow or a real multiplayer match.
+
+The scale matrix is synthetic, not physical multi-monitor DPI testing. The single actual OS capture concerns the installer's minimum window. Bitmap output does not verify Mica. No HTML/CSS design-system or anti-pattern detector ran because the application is native WinForms/Unity. Keyboard and accessibility semantics are grounded in source; these captures do not establish assistive-technology results.
+
+## Assets and uncanonized issues
+
+The shipping M image/icon comes from the user's BetterMalodyV.jpg with only its outer black background removed; the sponsor is native GDI+ painting inherited from the specified reference world. This documentation pass generated no shipping raster or replacement artwork and made no product-code or copy changes.
+
+No unresolved visual defect was promoted into the system. The DrawToBitmap scrollbar artifact is recorded as an evidence limitation, not a reusable appearance rule. No claim of real multiplayer, full-game-flow, physical-DPI or compositor validation is canonized.

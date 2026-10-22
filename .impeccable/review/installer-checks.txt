@@ -1,0 +1,32 @@
+PASS 浏览… width=100 text=48
+PASS 安装 BetterMalodyV width=314 text=162
+PASS 打开管理面板 width=254 text=102
+PASS 卸载插件 width=220 text=68
+PASS 浏览… width=125 text=48
+PASS 安装 BetterMalodyV width=394 text=162
+PASS 打开管理面板 width=319 text=102
+PASS 卸载插件 width=277 text=68
+PASS 浏览… width=150 text=48
+PASS 安装 BetterMalodyV width=474 text=162
+PASS 打开管理面板 width=384 text=102
+PASS 卸载插件 width=334 text=68
+PASS 浏览… width=200 text=48
+PASS 安装 BetterMalodyV width=634 text=162
+PASS 打开管理面板 width=514 text=102
+PASS 卸载插件 width=448 text=68
+PASS 浏览… width=100 text=48
+PASS 安装 BetterMalodyV width=268 text=162
+PASS 打开管理面板 width=208 text=102
+PASS 卸载插件 width=174 text=68
+PASS 浏览… width=125 text=48
+PASS 安装 BetterMalodyV width=337 text=162
+PASS 打开管理面板 width=262 text=102
+PASS 卸载插件 width=219 text=68
+PASS 浏览… width=150 text=48
+PASS 安装 BetterMalodyV width=405 text=162
+PASS 打开管理面板 width=315 text=102
+PASS 卸载插件 width=265 text=68
+PASS 浏览… width=200 text=48
+PASS 安装 BetterMalodyV width=542 text=162
+PASS 打开管理面板 width=422 text=102
+PASS 卸载插件 width=356 text=68

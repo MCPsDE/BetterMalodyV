@@ -1,0 +1,18 @@
+name: Desktop build and update tests
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+jobs:
+  desktop:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x
+      - run: dotnet run --project tests/BetterMalodyV.Tests.csproj -c Release
+      - run: dotnet build src/BetterMalodyV.Manager -c Release
+      - run: dotnet build src/BetterMalodyV.Installer -c Release
+# The IL2CPP plugin and offline payload require locally generated bindings from
+# the installed game; package and publish with scripts/build-release.ps1.

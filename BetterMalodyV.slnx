@@ -1,0 +1,9 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/BetterMalodyV.Installer/BetterMalodyV.Installer.csproj" />
+    <Project Path="src/BetterMalodyV.Manager/BetterMalodyV.Manager.csproj" />
+    <Project Path="src/BetterMalodyV.Plugin/BetterMalodyV.Plugin.csproj" />
+    <Project Path="src/BetterMalodyV.Shared/BetterMalodyV.Shared.csproj" />
+    <Project Path="src/BetterMalodyV.Windows/BetterMalodyV.Windows.csproj" />
+  </Folder>
+</Solution>

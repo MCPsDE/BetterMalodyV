@@ -1,0 +1,8 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup><OutputType>Exe</OutputType><TargetFramework>net8.0-windows</TargetFramework><EnableDefaultCompileItems>false</EnableDefaultCompileItems></PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\src\BetterMalodyV.Shared\BetterMalodyV.Shared.csproj" />
+    <Compile Include="UpdateTests.cs" />
+    <Compile Include="..\src\BetterMalodyV.Manager\UpdateService.cs" Link="UpdateService.cs" />
+  </ItemGroup>
+</Project>

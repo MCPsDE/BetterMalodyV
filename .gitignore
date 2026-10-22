@@ -1,0 +1,7 @@
+artifacts/
+vendor/
+generated/
+**/bin/
+**/obj/
+.vs/
+*.user

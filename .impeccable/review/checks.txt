@@ -1,0 +1,64 @@
+PASS 刷新说明 width=443, text=68, dpi=120
+PASS 检查更新 width=443, text=68, dpi=120
+PASS  width=92, text=0, dpi=120
+PASS 赞助支持 width=124, text=68, dpi=120
+PASS 刷新说明 width=555, text=68, dpi=120
+PASS 检查更新 width=555, text=68, dpi=120
+PASS  width=115, text=0, dpi=120
+PASS 赞助支持 width=155, text=68, dpi=120
+PASS 刷新说明 width=667, text=68, dpi=120
+PASS 检查更新 width=667, text=68, dpi=120
+PASS  width=138, text=0, dpi=120
+PASS 赞助支持 width=186, text=68, dpi=120
+PASS 刷新说明 width=891, text=68, dpi=120
+PASS 检查更新 width=891, text=68, dpi=120
+PASS  width=184, text=0, dpi=120
+PASS 赞助支持 width=248, text=68, dpi=120
+PASS 刷新说明 width=315, text=68, dpi=120
+PASS 检查更新 width=315, text=68, dpi=120
+PASS  width=92, text=0, dpi=120
+PASS 赞助支持 width=124, text=68, dpi=120
+PASS 刷新说明 width=395, text=68, dpi=120
+PASS 检查更新 width=395, text=68, dpi=120
+PASS  width=115, text=0, dpi=120
+PASS 赞助支持 width=155, text=68, dpi=120
+PASS 刷新说明 width=475, text=68, dpi=120
+PASS 检查更新 width=475, text=68, dpi=120
+PASS  width=138, text=0, dpi=120
+PASS 赞助支持 width=186, text=68, dpi=120
+PASS 刷新说明 width=635, text=68, dpi=120
+PASS 检查更新 width=635, text=68, dpi=120
+PASS  width=184, text=0, dpi=120
+PASS 赞助支持 width=248, text=68, dpi=120
+PASS 刷新说明 width=443, text=68, dpi=120
+PASS 检查更新 width=443, text=68, dpi=120
+PASS  width=92, text=0, dpi=120
+PASS 赞助支持 width=124, text=68, dpi=120
+PASS 刷新说明 width=555, text=68, dpi=120
+PASS 检查更新 width=555, text=68, dpi=120
+PASS  width=115, text=0, dpi=120
+PASS 赞助支持 width=155, text=68, dpi=120
+PASS 刷新说明 width=667, text=68, dpi=120
+PASS 检查更新 width=667, text=68, dpi=120
+PASS  width=138, text=0, dpi=120
+PASS 赞助支持 width=186, text=68, dpi=120
+PASS 刷新说明 width=891, text=68, dpi=120
+PASS 检查更新 width=891, text=68, dpi=120
+PASS  width=184, text=0, dpi=120
+PASS 赞助支持 width=248, text=68, dpi=120
+PASS 刷新说明 width=315, text=68, dpi=120
+PASS 检查更新 width=315, text=68, dpi=120
+PASS  width=92, text=0, dpi=120
+PASS 赞助支持 width=124, text=68, dpi=120
+PASS 刷新说明 width=395, text=68, dpi=120
+PASS 检查更新 width=395, text=68, dpi=120
+PASS  width=115, text=0, dpi=120
+PASS 赞助支持 width=155, text=68, dpi=120
+PASS 刷新说明 width=475, text=68, dpi=120
+PASS 检查更新 width=475, text=68, dpi=120
+PASS  width=138, text=0, dpi=120
+PASS 赞助支持 width=186, text=68, dpi=120
+PASS 刷新说明 width=635, text=68, dpi=120
+PASS 检查更新 width=635, text=68, dpi=120
+PASS  width=184, text=0, dpi=120
+PASS 赞助支持 width=248, text=68, dpi=120

@@ -1,0 +1,607 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-10-22T15:58:13.267Z",
+  "title": "Design System: BetterMalodyV",
+  "extensions": {
+    "colorMeta": {
+      "accent": {
+        "role": "primary",
+        "displayName": "Accent",
+        "tonalRamp": [
+          "oklch(15.00% 0.1150 246.84)",
+          "oklch(26.43% 0.1150 246.84)",
+          "oklch(37.86% 0.1150 246.84)",
+          "oklch(49.29% 0.1150 246.84)",
+          "oklch(60.71% 0.1150 246.84)",
+          "oklch(72.14% 0.1150 246.84)",
+          "oklch(83.57% 0.1150 246.84)",
+          "oklch(95.00% 0.1150 246.84)"
+        ]
+      },
+      "accent-light": {
+        "role": "primary",
+        "displayName": "Accent Light",
+        "tonalRamp": [
+          "oklch(15.00% 0.1493 251.63)",
+          "oklch(26.43% 0.1493 251.63)",
+          "oklch(37.86% 0.1493 251.63)",
+          "oklch(49.29% 0.1493 251.63)",
+          "oklch(60.71% 0.1493 251.63)",
+          "oklch(72.14% 0.1493 251.63)",
+          "oklch(83.57% 0.1493 251.63)",
+          "oklch(95.00% 0.1493 251.63)"
+        ]
+      },
+      "accent-fill": {
+        "role": "primary",
+        "displayName": "Accent Fill",
+        "tonalRamp": [
+          "oklch(15.00% 0.1493 251.63)",
+          "oklch(26.43% 0.1493 251.63)",
+          "oklch(37.86% 0.1493 251.63)",
+          "oklch(49.29% 0.1493 251.63)",
+          "oklch(60.71% 0.1493 251.63)",
+          "oklch(72.14% 0.1493 251.63)",
+          "oklch(83.57% 0.1493 251.63)",
+          "oklch(95.00% 0.1493 251.63)"
+        ]
+      },
+      "accent-hover": {
+        "role": "primary",
+        "displayName": "Accent Hover",
+        "tonalRamp": [
+          "oklch(15.00% 0.1310 251.42)",
+          "oklch(26.43% 0.1310 251.42)",
+          "oklch(37.86% 0.1310 251.42)",
+          "oklch(49.29% 0.1310 251.42)",
+          "oklch(60.71% 0.1310 251.42)",
+          "oklch(72.14% 0.1310 251.42)",
+          "oklch(83.57% 0.1310 251.42)",
+          "oklch(95.00% 0.1310 251.42)"
+        ]
+      },
+      "accent-pressed": {
+        "role": "primary",
+        "displayName": "Accent Pressed",
+        "tonalRamp": [
+          "oklch(15.00% 0.1240 249.93)",
+          "oklch(26.43% 0.1240 249.93)",
+          "oklch(37.86% 0.1240 249.93)",
+          "oklch(49.29% 0.1240 249.93)",
+          "oklch(60.71% 0.1240 249.93)",
+          "oklch(72.14% 0.1240 249.93)",
+          "oklch(83.57% 0.1240 249.93)",
+          "oklch(95.00% 0.1240 249.93)"
+        ]
+      },
+      "accent-soft": {
+        "role": "primary",
+        "displayName": "Accent Soft",
+        "tonalRamp": [
+          "oklch(15.00% 0.0476 244.28)",
+          "oklch(26.43% 0.0476 244.28)",
+          "oklch(37.86% 0.0476 244.28)",
+          "oklch(49.29% 0.0476 244.28)",
+          "oklch(60.71% 0.0476 244.28)",
+          "oklch(72.14% 0.0476 244.28)",
+          "oklch(83.57% 0.0476 244.28)",
+          "oklch(95.00% 0.0476 244.28)"
+        ]
+      },
+      "accent-soft-light": {
+        "role": "primary",
+        "displayName": "Accent Soft Light",
+        "tonalRamp": [
+          "oklch(15.00% 0.0186 242.97)",
+          "oklch(26.43% 0.0186 242.97)",
+          "oklch(37.86% 0.0186 242.97)",
+          "oklch(49.29% 0.0186 242.97)",
+          "oklch(60.71% 0.0186 242.97)",
+          "oklch(72.14% 0.0186 242.97)",
+          "oklch(83.57% 0.0186 242.97)",
+          "oklch(95.00% 0.0186 242.97)"
+        ]
+      },
+      "danger": {
+        "role": "secondary",
+        "displayName": "Danger",
+        "tonalRamp": [
+          "oklch(15.00% 0.1157 24.64)",
+          "oklch(26.43% 0.1157 24.64)",
+          "oklch(37.86% 0.1157 24.64)",
+          "oklch(49.29% 0.1157 24.64)",
+          "oklch(60.71% 0.1157 24.64)",
+          "oklch(72.14% 0.1157 24.64)",
+          "oklch(83.57% 0.1157 24.64)",
+          "oklch(95.00% 0.1157 24.64)"
+        ]
+      },
+      "danger-light": {
+        "role": "secondary",
+        "displayName": "Danger Light",
+        "tonalRamp": [
+          "oklch(15.00% 0.1857 29.53)",
+          "oklch(26.43% 0.1857 29.53)",
+          "oklch(37.86% 0.1857 29.53)",
+          "oklch(49.29% 0.1857 29.53)",
+          "oklch(60.71% 0.1857 29.53)",
+          "oklch(72.14% 0.1857 29.53)",
+          "oklch(83.57% 0.1857 29.53)",
+          "oklch(95.00% 0.1857 29.53)"
+        ]
+      },
+      "danger-fill": {
+        "role": "secondary",
+        "displayName": "Danger Fill",
+        "tonalRamp": [
+          "oklch(15.00% 0.1857 29.53)",
+          "oklch(26.43% 0.1857 29.53)",
+          "oklch(37.86% 0.1857 29.53)",
+          "oklch(49.29% 0.1857 29.53)",
+          "oklch(60.71% 0.1857 29.53)",
+          "oklch(72.14% 0.1857 29.53)",
+          "oklch(83.57% 0.1857 29.53)",
+          "oklch(95.00% 0.1857 29.53)"
+        ]
+      },
+      "danger-hover": {
+        "role": "secondary",
+        "displayName": "Danger Hover",
+        "tonalRamp": [
+          "oklch(15.00% 0.1639 29.28)",
+          "oklch(26.43% 0.1639 29.28)",
+          "oklch(37.86% 0.1639 29.28)",
+          "oklch(49.29% 0.1639 29.28)",
+          "oklch(60.71% 0.1639 29.28)",
+          "oklch(72.14% 0.1639 29.28)",
+          "oklch(83.57% 0.1639 29.28)",
+          "oklch(95.00% 0.1639 29.28)"
+        ]
+      },
+      "danger-pressed": {
+        "role": "secondary",
+        "displayName": "Danger Pressed",
+        "tonalRamp": [
+          "oklch(15.00% 0.1448 29.06)",
+          "oklch(26.43% 0.1448 29.06)",
+          "oklch(37.86% 0.1448 29.06)",
+          "oklch(49.29% 0.1448 29.06)",
+          "oklch(60.71% 0.1448 29.06)",
+          "oklch(72.14% 0.1448 29.06)",
+          "oklch(83.57% 0.1448 29.06)",
+          "oklch(95.00% 0.1448 29.06)"
+        ]
+      },
+      "success": {
+        "role": "secondary",
+        "displayName": "Success",
+        "tonalRamp": [
+          "oklch(15.00% 0.1425 144.08)",
+          "oklch(26.43% 0.1425 144.08)",
+          "oklch(37.86% 0.1425 144.08)",
+          "oklch(49.29% 0.1425 144.08)",
+          "oklch(60.71% 0.1425 144.08)",
+          "oklch(72.14% 0.1425 144.08)",
+          "oklch(83.57% 0.1425 144.08)",
+          "oklch(95.00% 0.1425 144.08)"
+        ]
+      },
+      "success-light": {
+        "role": "secondary",
+        "displayName": "Success Light",
+        "tonalRamp": [
+          "oklch(15.00% 0.1654 142.67)",
+          "oklch(26.43% 0.1654 142.67)",
+          "oklch(37.86% 0.1654 142.67)",
+          "oklch(49.29% 0.1654 142.67)",
+          "oklch(60.71% 0.1654 142.67)",
+          "oklch(72.14% 0.1654 142.67)",
+          "oklch(83.57% 0.1654 142.67)",
+          "oklch(95.00% 0.1654 142.67)"
+        ]
+      },
+      "canvas": {
+        "role": "neutral",
+        "displayName": "Canvas",
+        "tonalRamp": [
+          "oklch(15.00% 0.0000 0.00)",
+          "oklch(26.43% 0.0000 0.00)",
+          "oklch(37.86% 0.0000 0.00)",
+          "oklch(49.29% 0.0000 0.00)",
+          "oklch(60.71% 0.0000 0.00)",
+          "oklch(72.14% 0.0000 0.00)",
+          "oklch(83.57% 0.0000 0.00)",
+          "oklch(95.00% 0.0000 0.00)"
+        ]
+      },
+      "canvas-light": {
+        "role": "neutral",
+        "displayName": "Canvas Light",
+        "tonalRamp": [
+          "oklch(15.00% 0.0000 0.00)",
+          "oklch(26.43% 0.0000 0.00)",
+          "oklch(37.86% 0.0000 0.00)",
+          "oklch(49.29% 0.0000 0.00)",
+          "oklch(60.71% 0.0000 0.00)",
+          "oklch(72.14% 0.0000 0.00)",
+          "oklch(83.57% 0.0000 0.00)",
+          "oklch(95.00% 0.0000 0.00)"
+        ]
+      },
+      "surface": {
+        "role": "neutral",
+        "displayName": "Surface",
+        "tonalRamp": [
+          "oklch(15.00% 0.0000 0.00)",
+          "oklch(26.43% 0.0000 0.00)",
+          "oklch(37.86% 0.0000 0.00)",
+          "oklch(49.29% 0.0000 0.00)",
+          "oklch(60.71% 0.0000 0.00)",
+          "oklch(72.14% 0.0000 0.00)",
+          "oklch(83.57% 0.0000 0.00)",
+          "oklch(95.00% 0.0000 0.00)"
+        ]
+      },
+      "surface-light": {
+        "role": "neutral",
+        "displayName": "Surface Light",
+        "tonalRamp": [
+          "oklch(15.00% 0.0000 0.00)",
+          "oklch(26.43% 0.0000 0.00)",
+          "oklch(37.86% 0.0000 0.00)",
+          "oklch(49.29% 0.0000 0.00)",
+          "oklch(60.71% 0.0000 0.00)",
+          "oklch(72.14% 0.0000 0.00)",
+          "oklch(83.57% 0.0000 0.00)",
+          "oklch(95.00% 0.0000 0.00)"
+        ]
+      },
+      "surface-alt": {
+        "role": "neutral",
+        "displayName": "Surface Alt",
+        "tonalRamp": [
+          "oklch(15.00% 0.0000 0.00)",
+          "oklch(26.43% 0.0000 0.00)",
+          "oklch(37.86% 0.0000 0.00)",
+          "oklch(49.29% 0.0000 0.00)",
+          "oklch(60.71% 0.0000 0.00)",
+          "oklch(72.14% 0.0000 0.00)",
+          "oklch(83.57% 0.0000 0.00)",
+          "oklch(95.00% 0.0000 0.00)"
+        ]
+      },
+      "surface-alt-light": {
+        "role": "neutral",
+        "displayName": "Surface Alt Light",
+        "tonalRamp": [
+          "oklch(15.00% 0.0000 0.00)",
+          "oklch(26.43% 0.0000 0.00)",
+          "oklch(37.86% 0.0000 0.00)",
+          "oklch(49.29% 0.0000 0.00)",
+          "oklch(60.71% 0.0000 0.00)",
+          "oklch(72.14% 0.0000 0.00)",
+          "oklch(83.57% 0.0000 0.00)",
+          "oklch(95.00% 0.0000 0.00)"
+        ]
+      },
+      "ink": {
+        "role": "neutral",
+        "displayName": "Ink",
+        "tonalRamp": [
+          "oklch(15.00% 0.0000 0.00)",
+          "oklch(26.43% 0.0000 0.00)",
+          "oklch(37.86% 0.0000 0.00)",
+          "oklch(49.29% 0.0000 0.00)",
+          "oklch(60.71% 0.0000 0.00)",
+          "oklch(72.14% 0.0000 0.00)",
+          "oklch(83.57% 0.0000 0.00)",
+          "oklch(95.00% 0.0000 0.00)"
+        ]
+      },
+      "ink-light": {
+        "role": "neutral",
+        "displayName": "Ink Light",
+        "tonalRamp": [
+          "oklch(15.00% 0.0000 0.00)",
+          "oklch(26.43% 0.0000 0.00)",
+          "oklch(37.86% 0.0000 0.00)",
+          "oklch(49.29% 0.0000 0.00)",
+          "oklch(60.71% 0.0000 0.00)",
+          "oklch(72.14% 0.0000 0.00)",
+          "oklch(83.57% 0.0000 0.00)",
+          "oklch(95.00% 0.0000 0.00)"
+        ]
+      },
+      "muted-ink": {
+        "role": "neutral",
+        "displayName": "Muted Ink",
+        "tonalRamp": [
+          "oklch(15.00% 0.0000 0.00)",
+          "oklch(26.43% 0.0000 0.00)",
+          "oklch(37.86% 0.0000 0.00)",
+          "oklch(49.29% 0.0000 0.00)",
+          "oklch(60.71% 0.0000 0.00)",
+          "oklch(72.14% 0.0000 0.00)",
+          "oklch(83.57% 0.0000 0.00)",
+          "oklch(95.00% 0.0000 0.00)"
+        ]
+      },
+      "muted-ink-light": {
+        "role": "neutral",
+        "displayName": "Muted Ink Light",
+        "tonalRamp": [
+          "oklch(15.00% 0.0000 0.00)",
+          "oklch(26.43% 0.0000 0.00)",
+          "oklch(37.86% 0.0000 0.00)",
+          "oklch(49.29% 0.0000 0.00)",
+          "oklch(60.71% 0.0000 0.00)",
+          "oklch(72.14% 0.0000 0.00)",
+          "oklch(83.57% 0.0000 0.00)",
+          "oklch(95.00% 0.0000 0.00)"
+        ]
+      },
+      "line": {
+        "role": "neutral",
+        "displayName": "Line",
+        "tonalRamp": [
+          "oklch(15.00% 0.0000 0.00)",
+          "oklch(26.43% 0.0000 0.00)",
+          "oklch(37.86% 0.0000 0.00)",
+          "oklch(49.29% 0.0000 0.00)",
+          "oklch(60.71% 0.0000 0.00)",
+          "oklch(72.14% 0.0000 0.00)",
+          "oklch(83.57% 0.0000 0.00)",
+          "oklch(95.00% 0.0000 0.00)"
+        ]
+      },
+      "line-light": {
+        "role": "neutral",
+        "displayName": "Line Light",
+        "tonalRamp": [
+          "oklch(15.00% 0.0000 0.00)",
+          "oklch(26.43% 0.0000 0.00)",
+          "oklch(37.86% 0.0000 0.00)",
+          "oklch(49.29% 0.0000 0.00)",
+          "oklch(60.71% 0.0000 0.00)",
+          "oklch(72.14% 0.0000 0.00)",
+          "oklch(83.57% 0.0000 0.00)",
+          "oklch(95.00% 0.0000 0.00)"
+        ]
+      },
+      "control-pressed": {
+        "role": "neutral",
+        "displayName": "Control Pressed",
+        "tonalRamp": [
+          "oklch(15.00% 0.0000 0.00)",
+          "oklch(26.43% 0.0000 0.00)",
+          "oklch(37.86% 0.0000 0.00)",
+          "oklch(49.29% 0.0000 0.00)",
+          "oklch(60.71% 0.0000 0.00)",
+          "oklch(72.14% 0.0000 0.00)",
+          "oklch(83.57% 0.0000 0.00)",
+          "oklch(95.00% 0.0000 0.00)"
+        ]
+      },
+      "control-pressed-light": {
+        "role": "neutral",
+        "displayName": "Control Pressed Light",
+        "tonalRamp": [
+          "oklch(15.00% 0.0000 0.00)",
+          "oklch(26.43% 0.0000 0.00)",
+          "oklch(37.86% 0.0000 0.00)",
+          "oklch(49.29% 0.0000 0.00)",
+          "oklch(60.71% 0.0000 0.00)",
+          "oklch(72.14% 0.0000 0.00)",
+          "oklch(83.57% 0.0000 0.00)",
+          "oklch(95.00% 0.0000 0.00)"
+        ]
+      },
+      "on-fill": {
+        "role": "neutral",
+        "displayName": "On Fill",
+        "tonalRamp": [
+          "oklch(15.00% 0.0000 0.00)",
+          "oklch(26.43% 0.0000 0.00)",
+          "oklch(37.86% 0.0000 0.00)",
+          "oklch(49.29% 0.0000 0.00)",
+          "oklch(60.71% 0.0000 0.00)",
+          "oklch(72.14% 0.0000 0.00)",
+          "oklch(83.57% 0.0000 0.00)",
+          "oklch(95.00% 0.0000 0.00)"
+        ]
+      },
+      "sponsor-start": {
+        "role": "tertiary",
+        "displayName": "Sponsor Start",
+        "tonalRamp": [
+          "oklch(15.00% 0.1965 296.96)",
+          "oklch(26.43% 0.1965 296.96)",
+          "oklch(37.86% 0.1965 296.96)",
+          "oklch(49.29% 0.1965 296.96)",
+          "oklch(60.71% 0.1965 296.96)",
+          "oklch(72.14% 0.1965 296.96)",
+          "oklch(83.57% 0.1965 296.96)",
+          "oklch(95.00% 0.1965 296.96)"
+        ]
+      },
+      "sponsor-middle": {
+        "role": "tertiary",
+        "displayName": "Sponsor Middle",
+        "tonalRamp": [
+          "oklch(15.00% 0.1754 1.18)",
+          "oklch(26.43% 0.1754 1.18)",
+          "oklch(37.86% 0.1754 1.18)",
+          "oklch(49.29% 0.1754 1.18)",
+          "oklch(60.71% 0.1754 1.18)",
+          "oklch(72.14% 0.1754 1.18)",
+          "oklch(83.57% 0.1754 1.18)",
+          "oklch(95.00% 0.1754 1.18)"
+        ]
+      },
+      "sponsor-end": {
+        "role": "tertiary",
+        "displayName": "Sponsor End",
+        "tonalRamp": [
+          "oklch(15.00% 0.1285 258.65)",
+          "oklch(26.43% 0.1285 258.65)",
+          "oklch(37.86% 0.1285 258.65)",
+          "oklch(49.29% 0.1285 258.65)",
+          "oklch(60.71% 0.1285 258.65)",
+          "oklch(72.14% 0.1285 258.65)",
+          "oklch(83.57% 0.1285 258.65)",
+          "oklch(95.00% 0.1285 258.65)"
+        ]
+      }
+    },
+    "typographyMeta": {
+      "page-title": {
+        "displayName": "Page title",
+        "purpose": "Native desktop form title."
+      },
+      "document-title": {
+        "displayName": "Document title",
+        "purpose": "Markdown H1."
+      },
+      "document-heading": {
+        "displayName": "Document heading",
+        "purpose": "Markdown H2."
+      },
+      "document-subheading": {
+        "displayName": "Document subheading",
+        "purpose": "Deeper Markdown headings."
+      },
+      "section-title": {
+        "displayName": "Section title",
+        "purpose": "Installer content sections."
+      },
+      "document-body": {
+        "displayName": "Document body",
+        "purpose": "Selectable Markdown paragraphs and lists."
+      },
+      "body": {
+        "displayName": "Body",
+        "purpose": "Commands and supporting UI text."
+      },
+      "label": {
+        "displayName": "Label",
+        "purpose": "Metadata, concise status and author credit."
+      },
+      "sponsor-label": {
+        "displayName": "Sponsor label",
+        "purpose": "The exact manager sponsor command."
+      },
+      "diagnostic": {
+        "displayName": "Diagnostic",
+        "purpose": "Read-only installation log."
+      }
+    },
+    "shadows": [],
+    "motion": [],
+    "breakpoints": []
+  },
+  "components": [
+    {
+      "name": "Primary action",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "Browser translation of the native filled action; actual minimum size is measured by ActionButton and arranged by ButtonRow.",
+      "html": "<button class=\"ds-primary\">安装 BetterMalodyV</button>",
+      "css": ".ds-primary{font:10pt 'Microsoft YaHei UI','Segoe UI Variable Text','Segoe UI',sans-serif;border-radius:4px;min-height:40px;min-width:max-content;padding:6px 13px;white-space:nowrap;cursor:pointer;background:#0F6CBD;color:#FFFFFF;border:0}.ds-primary:hover{background:#115EA3}.ds-primary:active{background:#005493}.ds-primary:focus-visible{outline:1px dotted #FFFFFF;outline-offset:-5px}.ds-primary:disabled{background:#FAFAFA;color:#616161;cursor:default}"
+    },
+    {
+      "name": "Secondary action",
+      "kind": "button",
+      "refersTo": "button-secondary",
+      "description": "Dark manager translation of the native outlined supporting command.",
+      "html": "<button class=\"ds-secondary\">刷新说明</button>",
+      "css": ".ds-secondary{font:10pt 'Microsoft YaHei UI','Segoe UI Variable Text','Segoe UI',sans-serif;border-radius:4px;min-height:40px;min-width:max-content;padding:6px 13px;white-space:nowrap;cursor:pointer;background:#202020;color:#F5F5F5;border:1px solid #444444}.ds-secondary:hover{background:#292929}.ds-secondary:active{background:#333333}.ds-secondary:focus-visible{outline:1px dotted #F5F5F5;outline-offset:-5px}.ds-secondary:disabled{background:#292929;color:#B8B8B8;cursor:default}"
+    },
+    {
+      "name": "Directory field",
+      "kind": "input",
+      "description": "Browser illustration of the fixed-light native editable field; the application's frame and keyboard behavior are OS-owned.",
+      "html": "<label class=\"ds-path\">游戏目录<input aria-label=\"Malody V 游戏目录\" value=\"C:\\SteamLibrary\\steamapps\\common\\MalodyV\"></label>",
+      "css": ".ds-path{display:grid;gap:12px;color:#242424;font:700 11pt 'Microsoft YaHei UI','Segoe UI Variable Text','Segoe UI',sans-serif}.ds-path input{font:10pt 'Microsoft YaHei UI','Segoe UI Variable Text','Segoe UI',sans-serif;background:#FFFFFF;color:#242424;border:1px solid #E1E1E1;padding:3px 4px;min-width:0}.ds-path input:focus-visible{outline:1px solid #0F6CBD;outline-offset:0}.ds-path input:disabled{color:#616161;background:#FAFAFA}"
+    },
+    {
+      "name": "Selectable document",
+      "kind": "custom",
+      "refersTo": "document",
+      "description": "Browser illustration of the native read-only RichTextBox; source Markdown remains editable outside the manager.",
+      "html": "<article class=\"ds-document\" tabindex=\"0\" aria-label=\"BetterMalodyV 优化与修改说明\"><h1>BetterMalodyV</h1><p>让选曲更顺手。这里列出插件当前提供的全部优化与修改。</p><h2>按谱面状态筛选</h2><p>在大厅与联机房间的高级搜索中，原有等级、BPM、时长筛选器下方新增「谱面状态」。</p></article>",
+      "css": ".ds-document{background:#181818;color:#F5F5F5;font:10.5pt 'Microsoft YaHei UI','Segoe UI Variable Text','Segoe UI',sans-serif;max-height:280px;overflow-y:auto;user-select:text}.ds-document h1{font-size:23pt;font-weight:700;margin:0 0 1em}.ds-document h2{font-size:16pt;font-weight:700;margin:1em 0}.ds-document p{margin:0 0 1em}.ds-document:focus-visible{outline:1px dotted #B8B8B8;outline-offset:2px}"
+    },
+    {
+      "name": "Appearance toggle",
+      "kind": "button",
+      "refersTo": "appearance-toggle",
+      "description": "Illustration of the native sun-left/moon-right CheckButton, shown dark; drawing uses geometry and feedback is immediate.",
+      "html": "<button class=\"ds-appearance\" aria-label=\"暗黑模式\" aria-pressed=\"true\"><svg viewBox=\"0 0 24 24\" aria-hidden=\"true\"><circle cx=\"12\" cy=\"12\" r=\"3.2\"/><path d=\"M12 4v2m0 12v2M4 12h2m12 0h2M6.3 6.3l1.4 1.4m8.6 8.6 1.4 1.4M6.3 17.7l1.4-1.4m8.6-8.6 1.4-1.4\"/></svg><span class=\"ds-selected\"><svg viewBox=\"0 0 24 24\" aria-hidden=\"true\"><path d=\"M19.5 15.3A7.5 7.5 0 0 1 8.7 4.5a7.5 7.5 0 1 0 10.8 10.8Z\"/></svg></span></button>",
+      "css": ".ds-appearance{width:92px;height:38px;padding:3px;border:1px solid #444444;border-radius:19px;background:#292929;color:#B8B8B8;display:inline-flex;align-items:center;justify-content:space-around;cursor:pointer}.ds-appearance svg{width:24px;height:24px;fill:none;stroke:currentColor;stroke-width:1.5}.ds-appearance .ds-selected{border-radius:16px;background:#1B3448;color:#69AFED;width:41px;height:30px;display:grid;place-items:center}.ds-appearance .ds-selected path{fill:currentColor;stroke:none}.ds-appearance:hover{background:#333333}.ds-appearance:focus-visible{outline:1px dotted #F5F5F5;outline-offset:-5px}"
+    },
+    {
+      "name": "Sponsor action",
+      "kind": "button",
+      "refersTo": "sponsor",
+      "description": "Native manager sponsor action translated for preview; the application opens https://ifdian.net/a/mcpsde.",
+      "html": "<button class=\"ds-sponsor\">赞助支持</button>",
+      "css": ".ds-sponsor{font:700 10pt 'Microsoft YaHei UI','Segoe UI Variable Text','Segoe UI',sans-serif;width:124px;height:38px;border:0;border-radius:4px;color:#FFFFFF;white-space:nowrap;cursor:pointer;background:linear-gradient(102deg,#642BB1 0%,#A61D58 52%,#18488F 100%)}.ds-sponsor:hover{background:linear-gradient(#FFFFFF10,#FFFFFF10),linear-gradient(102deg,#642BB1 0%,#A61D58 52%,#18488F 100%)}.ds-sponsor:active{background:linear-gradient(#00000023,#00000023),linear-gradient(102deg,#642BB1 0%,#A61D58 52%,#18488F 100%)}.ds-sponsor:focus-visible{outline:1px dotted #FFFFFF;outline-offset:-5px}"
+    },
+    {
+      "name": "Environment inset",
+      "kind": "card",
+      "description": "Fixed-light rectangular native panel grouping the environment diagnosis, without a custom shadow.",
+      "html": "<section class=\"ds-environment\"><h2>运行环境</h2><p>选择有效目录后，将自动检查 BepInEx。</p></section>",
+      "css": ".ds-environment{padding:20px;background:#FFFFFF;color:#242424;font:10pt 'Microsoft YaHei UI','Segoe UI Variable Text','Segoe UI',sans-serif}.ds-environment h2{font-size:11pt;font-weight:700;margin:0 0 12px}.ds-environment p{margin:0;color:#616161}"
+    },
+    {
+      "name": "Diagnostic log",
+      "kind": "input",
+      "refersTo": "diagnostic-log",
+      "description": "Browser illustration of the native read-only installation log with its monospace family chain.",
+      "html": "<textarea class=\"ds-log\" readonly aria-label=\"安装详细记录\">准备就绪。安装过程中可在这里查看详细进度。</textarea>",
+      "css": ".ds-log{height:100px;width:100%;font:9pt 'Cascadia Mono',Consolas,'Courier New',monospace;background:#FFFFFF;color:#616161;border:0;resize:none;overflow-y:auto}.ds-log:focus-visible{outline:1px dotted #616161;outline-offset:2px}"
+    }
+  ],
+  "narrative": {
+    "northStar": "Fluent 2 Windows utility",
+    "overview": "BetterMalodyV deliberately reuses the user's established MalodyVThemeLoader world: quiet neutral layers, restrained blue actions and familiar native controls for Chinese-speaking Malody V players. The manager defaults to dark and saves a light or dark preference; the installer always uses light. The supplied M artwork and the shared multicolor sponsor control carry the identity.\n\nThis is a record of the shipped WinForms implementation, not a new identity proposal. The manager's reading strategy and the installer's operation strategy live in `.impeccable/briefs/desktop.md`. Unity search controls retain their separate native game context.",
+    "keyCharacteristics": [
+      "Paired dark and light neutral surfaces with blue action feedback.",
+      "Native Chinese UI typography, keyboard behavior and visible focus.",
+      "Full command labels with measured sizing and shared row reflow.",
+      "Supplied M artwork with its outer black background removed.",
+      "One multicolor sponsor action in the manager footer."
+    ],
+    "rules": [
+      {
+        "name": "The State Rule",
+        "body": "Pair status color with words or an enabled, disabled or selected control state.",
+        "section": "colors"
+      },
+      {
+        "name": "The Native Type Rule",
+        "body": "Keep the Chinese desktop UI on the installed native family chain and retain point-based sizing.",
+        "section": "typography"
+      },
+      {
+        "name": "The Full Command Rule",
+        "body": "Measure the actual command font at the current DPI and retain the complete single-line label; grow or reflow the container instead of shrinking, wrapping or ellipsizing commands.",
+        "section": "typography"
+      }
+    ],
+    "dos": [
+      "Do use the paired appearance palette and keep readable accents separate from solid action fills.",
+      "Do keep complete single-line commands through shared text measurement and row reflow.",
+      "Do retain selectable document text, native keyboard behavior, visible focus and explicit operation feedback.",
+      "Do preserve the supplied M artwork, exact author credit and manager sponsor label and destination.",
+      "Do keep the installer light with a credit-only footer and preserve the manager preference."
+    ],
+    "donts": [
+      "Don't spread the sponsor gradient into workspace surfaces or ordinary actions.",
+      "Don't hide undersized commands with wrapping, clipping, smaller text or overflow ellipsis.",
+      "Don't replace missing game-font CJK characters with unreadable boxes; retain the English fallback.",
+      "Don't present synthetic scaling or isolated runtime fixtures as physical-DPI or real multiplayer verification."
+    ]
+  }
+}

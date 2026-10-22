@@ -1,0 +1,32 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <Nullable>enable</Nullable>
+    <UseWindowsForms>true</UseWindowsForms>
+    <ApplicationHighDpiMode>PerMonitorV2</ApplicationHighDpiMode>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <AssemblyName>BetterMalodyV.Installer</AssemblyName>
+    <RuntimeIdentifier>win-x64</RuntimeIdentifier>
+    <SelfContained>true</SelfContained>
+    <PublishSingleFile>true</PublishSingleFile>
+    <IncludeNativeLibrariesForSelfExtract>true</IncludeNativeLibrariesForSelfExtract>
+    <EnableCompressionInSingleFile>true</EnableCompressionInSingleFile>
+    <DebugType>none</DebugType>
+    <DebugSymbols>false</DebugSymbols>
+    <Deterministic>true</Deterministic>
+    <ApplicationIcon>..\BetterMalodyV.Windows\Assets\mtp.ico</ApplicationIcon>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\BetterMalodyV.Shared\BetterMalodyV.Shared.csproj" />
+    <ProjectReference Include="..\BetterMalodyV.Windows\BetterMalodyV.Windows.csproj" />
+  </ItemGroup>
+
+  <ItemGroup Condition="Exists('..\..\artifacts\payload.zip')">
+    <EmbeddedResource Include="..\..\artifacts\payload.zip"
+                      LogicalName="BetterMalodyV.Payload.zip" />
+  </ItemGroup>
+
+</Project>
