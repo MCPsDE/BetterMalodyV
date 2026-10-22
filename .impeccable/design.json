@@ -3,6 +3,13 @@
   "generatedAt": "2026-10-22T15:58:13.267Z",
   "title": "Design System: BetterMalodyV",
   "extensions": {
+    "nativeStatus": {
+      "scope": "Unity search input status labels, 1.0.2",
+      "selectedFill": "rgba(107,107,107,0.55)",
+      "unselectedFill": "rgba(82,82,82,0.30)",
+      "checkboxMark": "#EBEBEB",
+      "checkboxFrame": "#BFBFBF"
+    },
     "colorMeta": {
       "accent": {
         "role": "primary",

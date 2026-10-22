@@ -4,7 +4,7 @@ Windows x64 / IL2CPP 版 Malody V 优化插件。首个功能：大厅和联机�
 
 [下载安装器](https://github.com/MCPsDE/BetterMalodyV/releases/latest) · [全部功能说明](docs/FEATURES.md)
 
-1. 退出游戏，运行 `BetterMalodyV-Setup-1.0.1.exe`，确认游戏目录并安装。
+1. 退出游戏，运行 `BetterMalodyV-Setup-1.0.2.exe`，确认游戏目录并安装。
 2. 安装器复用兼容的 BepInEx 6 IL2CPP；没有环境时离线安装随附的 `6.0.0-be.785`。
 3. 照常从 Steam 启动游戏，打开右上角搜索，在输入框内部右侧勾选 Stable、Beta、Alpha（含 Promotion）；All 恢复全部。
 4. 桌面的「BetterMalodyV 管理面板」用于查看功能说明、赞助和检查更新。
@@ -13,7 +13,7 @@ Windows x64 / IL2CPP 版 Malody V 优化插件。首个功能：大厅和联机�
 
 管理面板的内容直接来自 `docs/FEATURES.md`。修改仓库文档后重新打包即可分发；已安装用户可以直接编辑游戏目录下的 `BetterMalodyV/docs/FEATURES.md`，保存后面板自动刷新。修复和更新会保留手动修改过的说明文件，未修改的说明会随插件更新；想恢复新版随附说明时，先备份并移走该文件，再修复。
 
-状态来自游戏本地数据库的 `ChartRecord.RankStatus`，不是实时联网查询。Alpha=0、Beta=1、Stable=2；Promotion 是推荐属性，没有独立的本地状态值。Unknown=10、Update=11 仅在「全部」时显示。首次启用状态筛选会按游戏原有方式延迟加载本地谱面元数据，大曲库可能需要等待。
+状态来自游戏本地数据库的 `ChartRecord.RankStatus`，不是实时联网查询。Alpha=0、Beta=1、Stable=2；Promotion 是推荐属性，没有独立的本地状态值。Unknown=10、Update=11 仅在「全部」时显示。1.0.2 在后台读取数据库副本建立索引，筛选时不遍历曲库目录、不解析谱面文件；后台缓存准备完成后自动刷新结果。已打开歌曲使用当前内存中的谱面状态。
 
 管理面板打开时自动检查 GitHub 正式 Release，下载对应版本安装器并校验 SHA-256，等待面板关闭后安装并重新打开。请先退出游戏，插件在下次启动游戏时更新。安装器也支持 `--check`、`--install`、`--verify`、`--uninstall <游戏目录>`。
 
@@ -23,7 +23,7 @@ Windows x64 / IL2CPP 版 Malody V 优化插件。首个功能：大厅和联机�
 pwsh -NoProfile -File scripts/prepare-dependencies.ps1
 dotnet build BetterMalodyV.slnx -c Release
 pwsh -NoProfile -File scripts/build-release.ps1
-pwsh -NoProfile -File scripts/test-installer.ps1 -InstallerExe artifacts/release/BetterMalodyV-Setup-1.0.1.exe
+pwsh -NoProfile -File scripts/test-installer.ps1 -InstallerExe artifacts/release/BetterMalodyV-Setup-1.0.2.exe
 pwsh -NoProfile -File scripts/test-runtime-reuse.ps1
 ```
 

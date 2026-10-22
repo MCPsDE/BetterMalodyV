@@ -19,12 +19,20 @@ public sealed class RuntimeVerification : MonoBehaviour
 {
     public RuntimeVerification(IntPtr pointer) : base(pointer) { }
     private bool ran;
+    private bool benchmarkDone;
     private float captureAt = float.PositiveInfinity;
     private float exitAt = float.PositiveInfinity;
     private static string Root => Environment.GetEnvironmentVariable("BETTER_MALODYV_TEST_OUTPUT")!;
     private readonly List<string> checks = new();
     private Camera? captureCamera;
     private PanelSearchSong? realPanel;
+    private long refreshMilliseconds;
+    private int stressSongs;
+    private int cachedRecords;
+    private long indexBuildMilliseconds;
+    private int realSongSamples,realStatusMatches;
+    private static int scanAttempts;
+    private static bool blockScans;
     private static int Width => int.TryParse(Environment.GetEnvironmentVariable("BETTER_MALODYV_TEST_WIDTH"),out var width) ? width : 1440;
     private static int Height => int.TryParse(Environment.GetEnvironmentVariable("BETTER_MALODYV_TEST_HEIGHT"),out var height) ? height : 900;
     public static void Install(Plugin plugin, Harmony harmony)
@@ -32,7 +40,9 @@ public sealed class RuntimeVerification : MonoBehaviour
         if (string.IsNullOrWhiteSpace(Root)) throw new InvalidOperationException("Verification output required");
         harmony.Patch(AccessTools.Method(typeof(SceneLogo),"Start"), prefix: new HarmonyMethod(typeof(RuntimeVerification),nameof(SkipLogo)));
         plugin.AddComponent<RuntimeVerification>();
+        harmony.Patch(Plugin.Adapter.ScanFiles,prefix:new HarmonyMethod(typeof(RuntimeVerification),nameof(TrackScan)));
     }
+    private static bool TrackScan() { if (!blockScans) return true; scanAttempts++; return false; }
     private static bool SkipLogo() => false;
     public void Update()
     {
@@ -40,6 +50,16 @@ public sealed class RuntimeVerification : MonoBehaviour
         {
             if (Time.unscaledTime >= captureAt && captureCamera is not null)
             {
+                if (!benchmarkDone)
+                {
+                    benchmarkDone=true;
+                    try { TestLargeLibrary(); }
+                    catch (Exception ex) { WriteResult(ex); exitAt=Time.unscaledTime+.2f; captureAt=float.PositiveInfinity; return; }
+                    // Native fixture allocation can consume a long frame.
+                    // Let popup animation/layout advance before measuring the UI.
+                    captureAt=Time.unscaledTime+1.2f;
+                    return;
+                }
                 captureAt = float.PositiveInfinity;
                 try { ValidateRealPanel(); }
                 catch (Exception ex) { WriteResult(ex); }
@@ -69,7 +89,8 @@ public sealed class RuntimeVerification : MonoBehaviour
     private void Check(bool condition,string label) { if (!condition) throw new Exception(label); checks.Add(label); }
     [Il2CppInterop.Runtime.Attributes.HideFromIl2Cpp]
     private void WriteResult(Exception? error = null) => File.WriteAllText(Path.Combine(Root,"result.json"),
-        JsonSerializer.Serialize(new { passed = error is null,error = error?.ToString(),checks },new JsonSerializerOptions { WriteIndented = true }));
+        JsonSerializer.Serialize(new { passed = error is null,error = error?.ToString(),checks,
+            performance = new { cachedRecords,indexBuildMilliseconds,realSongSamples,realStatusMatches,unloadedSongs = stressSongs,refreshMilliseconds,scanAttempts } },new JsonSerializerOptions { WriteIndented = true }));
     private void TestNativeData()
     {
         var adapter = Plugin.Adapter;
@@ -97,6 +118,13 @@ public sealed class RuntimeVerification : MonoBehaviour
         }
         var stable = Chart(2,PlayModeType.Key); var beta = Chart(1,PlayModeType.Taiko);
         var alpha = Chart(0,PlayModeType.Key); var unknown = Chart(10,PlayModeType.Key);
+        var modeProperty=chartType.GetProperties().Single(p=>p.PropertyType==typeof(PlayModeType));
+        var mappingChart=Chart(2,PlayModeType.Key);
+        foreach(var fileMode in new uint[] { 1,0x10,0x20,0x40,0x10000,0x20000,2,8,0x80,0x100,4,0x200,0x400,0x800,0x1000,0x2000,0x4000,0x8000 })
+        {
+            ((ChartRecord)chartMetaProperty.GetValue(mappingChart)!).ChartMode=fileMode;
+            Check((int)(PlayModeType)modeProperty.GetValue(mappingChart)! == ChartStatusIndex.ToPlayMode(fileMode),"Cached mode mapping matches actual game format "+fileMode);
+        }
         foreach(var chart in new[] { stable,beta,alpha,unknown }) add.Invoke(list,new[] { chart });
         mode.SetValue(filter,PlayModeType.Max);
         for (var mask = 0; mask <= 7; mask++)
@@ -122,6 +150,71 @@ public sealed class RuntimeVerification : MonoBehaviour
         Check(!(bool)adapter.Contains.Invoke(filter,new[] { song })!,"Unknown never passes Alpha");
         Plugin.SetSelection(StatusMask.All);
         Check((bool)adapter.Contains.Invoke(filter,new[] { song })!,"All preserves unknown charts");
+    }
+
+    private void TestLargeLibrary()
+    {
+        var adapter = Plugin.Adapter;
+        cachedRecords=adapter.StatusStore.Index.RecordCount;
+        indexBuildMilliseconds=adapter.StatusStore.LastBuildMilliseconds;
+        if (Environment.GetEnvironmentVariable("BETTER_MALODYV_TEST_METADATA")=="1")
+            Check(adapter.StatusStore.Ready && cachedRecords>0,"Background index reads real copied chart database without loading charts");
+        var singleton = adapter.ManagerType.BaseType!.GetProperties(BindingFlags.Public|BindingFlags.Static|BindingFlags.FlattenHierarchy)
+            .Single(p=>p.PropertyType==adapter.ManagerType && !p.CanWrite);
+        var manager = singleton.GetValue(null)!;
+        var properties = adapter.ManagerType.GetProperties();
+        var rawProperty = properties.Single(p=>p.PropertyType.IsGenericType && p.PropertyType.GetGenericTypeDefinition().FullName=="Il2CppSystem.Collections.Generic.Dictionary`2"
+            && p.PropertyType.GenericTypeArguments[1]==adapter.SongType);
+        var raw = rawProperty.GetValue(manager)!;
+        var metaProperty = adapter.SongType.GetProperties().Single(p=>p.PropertyType==typeof(SongRecord));
+        if (Environment.GetEnvironmentVariable("BETTER_MALODYV_TEST_METADATA")=="1")
+        {
+            var at=adapter.ManagerType.GetMethod("GetSongAt")!;
+            for(var i=0;i<1000;i++)
+            {
+                var real=at.Invoke(manager,new object[] { i });
+                if(real is null) break;
+                var realMeta=(SongRecord)metaProperty.GetValue(real)!; realSongSamples++;
+                if(adapter.StatusStore.Index.Matches(realMeta.Path,(int)PlayModeType.Max,StatusMask.Stable|StatusMask.Beta)) realStatusMatches++;
+            }
+            Check(realSongSamples>0 && realStatusMatches>0,"Actual SongRecord paths match background ChartRecord folder index");
+        }
+        var rawClear = rawProperty.PropertyType.GetMethod("Clear")!; rawClear.Invoke(raw,null);
+        var rawAdd = rawProperty.PropertyType.GetMethod("Add")!;
+        var index = new ChartStatusIndex(); stressSongs=20_000;
+        for(var i=0;i<stressSongs;i++)
+        {
+            var song=Activator.CreateInstance(adapter.SongType)!;
+            var meta=(SongRecord)metaProperty.GetValue(song)!;
+            meta.Path=$"E:/BetterMalodyV-never-read/Song{i}/"; meta.Mode=0x40; meta.Title="Stress fixture";
+            index.Add(meta.Path+"chart.mc",0x40,(uint)(i%3));
+            rawAdd.Invoke(raw,new object[] { (ulong)(i+1),song });
+        }
+        var originalIndex = adapter.StatusStore.Index;
+        adapter.StatusStore.SetTestIndex(index);
+        var filter = properties.Single(p=>p.PropertyType==adapter.Contains.DeclaringType && !p.CanWrite).GetValue(manager)!;
+        filter.GetType().GetProperties().Single(p=>p.PropertyType==typeof(PlayModeType)).SetValue(filter,PlayModeType.Max);
+        try
+        {
+            Plugin.SetSelection(StatusMask.Stable); blockScans=true; scanAttempts=0;
+            var watch=System.Diagnostics.Stopwatch.StartNew();
+            Check(adapter.RefreshAfterIndex(),"Actual native RefreshDisplayList executes on unloaded large library");
+            refreshMilliseconds=watch.ElapsedMilliseconds;
+            var listProperty=properties.Single(p=>p.PropertyType.IsGenericType && p.PropertyType.GetGenericTypeDefinition().FullName=="Il2CppSystem.Collections.Generic.List`1"
+                && p.PropertyType.GenericTypeArguments[0]==adapter.SongType);
+            var list=listProperty.GetValue(manager)!;
+            var count=(int)listProperty.PropertyType.GetProperty("Count")!.GetValue(list)!;
+            Check(count==stressSongs/3,"Large native library has exactly the Stable songs");
+            Check(scanAttempts==0,"Zero ScanFiles calls while native display write lock is held");
+            Check(refreshMilliseconds<5000,"20,000-song native refresh completes within five seconds");
+            Check(ChartRecord.PathFieldNumber==7 && ChartRecord.ChartModeFieldNumber==15 && ChartRecord.RankStatusFieldNumber==16,"Actual protobuf field numbers match snapshot parser");
+        }
+        finally
+        {
+            blockScans=false; Plugin.SetSelection(StatusMask.All); rawClear.Invoke(raw,null);
+            adapter.StatusStore.SetTestIndex(originalIndex);
+            adapter.RefreshAfterIndex();
+        }
     }
 
     private void TestControls()

@@ -10,7 +10,11 @@
 
 实际发行版混淆了 Song、ChartManager、meta 和 ShowList 等别名。`GameAdapter` 按保留的 `RebuildShowList`、`RefreshDisplayList`、`IsContain`、唯一泛型显示列表、`ChartRecord` 类型绑定，启动时验证唯一性。遇到歧义，卸下补丁并保留原始游戏行为，日志记录具体错误。
 
-歌曲筛选只在原始 `IsContain` 返回 true 后收窄，保留原关键词、收藏夹等逻辑；选定模式时，同一张谱面须满足模式和状态。按游戏原有 `Song.ScanFiles(false)` 延迟加载本地数据库记录。原始完整图表映射不变，不写 RankStatus，不修改成绩或网络协议。
+歌曲筛选只在原始 `IsContain` 返回 true 后收窄，保留原关键词、收藏夹等逻辑；选定模式时，同一张谱面须满足模式和状态。1.0.2 删除该谓词中的 `ScanFiles`：它处于 `RefreshDisplayList` 写锁内，旧实现会在主线程对全库遍历目录、加载与解析谱面，曲库大时造成长时间阻塞。未加载歌曲直接查询不可变的文件夹/模式/状态索引；已加载歌曲读取当前内存谱面状态。原始完整图表映射不变，不写 RankStatus，不修改成绩或网络协议。
+
+LocalStatusStore 在托管后台工作线程复制 `chart.bin` 到独立临时文件，使用当前游戏 LibCpp 的既有 UnqDB 导出只读取副本。不会打开/锁定/关闭游戏的数据库句柄，不在后台调用 Unity 或 IL2CPP 接口。轻量 protobuf 读取器只提取 Path(7)、ChartMode(15)、RankStatus(16)，按路径祖先聚合各游戏模式的三位状态集合，发布后只读。格式到模式的映射与实际游戏 getter 在原生测试逐项比对。副本若读取期间源文件发生变化，则丢弃，下次重试；重复相同错误只记录一次。
+
+控制器每五秒异步检查缓存文件变更，索引准备完成后在主线程刷新列表，等待原有全库扫描结束再刷新；联机选曲面板不监听 ChartLoaded，因此另外刷新其列表。索引准备期间不阻塞谓词；首次限制筛选可能暂时为空，准备后自动更新。进入一首未加载的歌曲时才执行该歌曲原有的 ScanFiles，过滤后恢复 ShowList。
 
 歌曲内列表只在大厅 `SceneChart.Refresh` 状态机的同步 MoveNext 与联机 `PanelRoomChart.OpenChart` 执行期间暂时收窄 ShowList；完成或异常时立即恢复。这样实际原生列表与选中索引都按过滤后条目生成，且后台完整谱面映射、编辑和通过 hash 访问不受影响。所有临时修改均在 UI 主线程。
 

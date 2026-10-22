@@ -8,7 +8,7 @@ using Malody.Scene.Panel;
 
 namespace BetterMalodyV.Plugin;
 
-[BepInPlugin("com.mcpsde.bettermalodyv", "BetterMalodyV", "1.0.1")]
+[BepInPlugin("com.mcpsde.bettermalodyv", "BetterMalodyV", "1.0.2")]
 public sealed class Plugin : BasePlugin
 {
     internal static Plugin Current = null!;
@@ -32,6 +32,7 @@ public sealed class Plugin : BasePlugin
             harmony.Patch(Adapter.RefreshMoveNext, prefix: Hook(nameof(ChartBefore)), postfix: Hook(nameof(DisplayAfter)), finalizer: Hook(nameof(DisplayFinally)));
             harmony.Patch(typeof(PanelSearchSong).GetMethod("Show"), postfix: Hook(nameof(SearchShown)));
             AddComponent<SearchFilterController>();
+            Adapter.StatusStore.RequestRefresh(Paths.GameRootPath);
             Log.LogInfo($"BetterMalodyV loaded. Local status filter: {Selection}. Contracts: {Adapter.SongType.FullName}, {Adapter.ManagerType.FullName}.");
 #if BETTER_MALODYV_VERIFY
             RuntimeVerification.Install(this, harmony);
@@ -72,6 +73,8 @@ public sealed class Plugin : BasePlugin
     internal void LogUiAttached(PanelSearchSong panel,float controlsWidth,float textWidth) =>
         Log.LogInfo($"Status controls attached inside search input: {panel.gameObject.name}, controls={controlsWidth:F0}, text viewport={textWidth:F0}.");
     internal void LogUiFailure(Exception ex) => Log.LogError("Cannot attach search status controls: "+ex);
+    internal void LogIndexReady(int records,long milliseconds) => Log.LogInfo($"Local status index ready: {records} cached chart records, {milliseconds} ms on background worker.");
+    internal void LogIndexFailure(Exception ex) => Log.LogWarning("Local status index unavailable; retaining previous snapshot: "+ex.Message);
     private static void Disable(Exception ex)
     {
         if (!failed) Current.Log.LogError("Status filtering disabled; original selection preserved. " + ex);

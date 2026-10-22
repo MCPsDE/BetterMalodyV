@@ -31,7 +31,7 @@ internal static class SearchFilterUi
                 {
                     var on = (Plugin.Selection & flag) != 0;
                     toggle.SetIsOnWithoutNotify(on);
-                    background.color = on ? new Color(.10f,.32f,.51f,.96f) : new Color(.10f,.12f,.16f,.9f);
+                    background.color = on ? new Color(.42f,.42f,.42f,.55f) : new Color(.32f,.32f,.32f,.30f);
                 }
             }
             foreach (var (flag,label) in new[] { (StatusMask.Stable,"Stable"),(StatusMask.Beta,"Beta"),(StatusMask.Alpha,"Alpha") })
@@ -42,10 +42,10 @@ internal static class SearchFilterUi
                 var box = CreateRect("Checkbox",rect);
                 box.anchorMin = box.anchorMax = box.pivot = new Vector2(0,.5f);
                 box.anchoredPosition = new Vector2(8,0); box.sizeDelta = new Vector2(20,20);
-                box.gameObject.AddComponent<Image>().color = new Color(.75f,.8f,.88f,1);
+                box.gameObject.AddComponent<Image>().color = new Color(.75f,.75f,.75f,1);
                 var tick = CreateRect("Checked",box);
                 tick.anchorMin = tick.anchorMax = new Vector2(.5f,.5f); tick.sizeDelta = new Vector2(12,12);
-                var mark = tick.gameObject.AddComponent<Image>(); mark.color = new Color(.2f,.6f,1,1);
+                var mark = tick.gameObject.AddComponent<Image>(); mark.color = new Color(.92f,.92f,.92f,1);
                 toggle.graphic = mark;
                 var text = Label(rect,label,source,fontSize,36,height);
                 var width = text.GetPreferredValues(label).x+48;
@@ -58,7 +58,7 @@ internal static class SearchFilterUi
                 }));
             }
             var resetRect = CreateRect("All",root);
-            var resetBackground = resetRect.gameObject.AddComponent<Image>(); resetBackground.color = new Color(.10f,.12f,.16f,.9f);
+            var resetBackground = resetRect.gameObject.AddComponent<Image>(); resetBackground.color = new Color(.32f,.32f,.32f,.30f);
             var reset = resetRect.gameObject.AddComponent<Button>(); reset.targetGraphic = resetBackground;
             var resetText = Label(resetRect,"All",source,fontSize,10,height);
             var resetWidth = resetText.GetPreferredValues("All").x+24;

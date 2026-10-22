@@ -16,8 +16,11 @@ internal sealed class GameAdapter
     public MethodInfo RefreshMoveNext { get; }
     public MethodInfo RoomOpen { get; }
     public MethodInfo Fill { get; }
+    public MethodInfo ScanFiles => scan;
+    internal LocalStatusStore StatusStore { get; } = new();
     private readonly MethodInfo scan;
-    private readonly PropertyInfo showList, chartMeta, chartMode, filterMode;
+    private readonly PropertyInfo showList, chartMeta, chartMode, filterMode, songMeta, fullLoaded, managerInstance, scanning;
+    private readonly MethodInfo refresh;
     private readonly MethodInfo count, item, clear, add;
 
     public GameAdapter()
@@ -30,6 +33,12 @@ internal sealed class GameAdapter
             .Single(m => m.Name == "IsContain" && m.ReturnType == typeof(bool) && m.GetParameters() is var p && p.Length == 1 && p[0].ParameterType == SongType);
         filterMode = Contains.DeclaringType!.GetProperties(Instance).Single(p => p.PropertyType == typeof(PlayModeType));
         scan = SongType.GetMethod("ScanFiles", new[] { typeof(bool) })!;
+        songMeta = SongType.GetProperties(Instance).Single(p => p.PropertyType == typeof(SongRecord));
+        fullLoaded = SongType.GetProperties(Instance|BindingFlags.DeclaredOnly).Single(p => p.GetMethod?.Name == "get_FullLoaded");
+        managerInstance = ManagerType.BaseType!.GetProperties(BindingFlags.Public|BindingFlags.Static|BindingFlags.FlattenHierarchy)
+            .Single(p => p.PropertyType == ManagerType && p.CanWrite);
+        scanning = ManagerType.GetProperties(Instance|BindingFlags.DeclaredOnly).Single(p => p.GetMethod?.Name == "get_Scanning");
+        refresh = ManagerType.GetMethod("RefreshDisplayList",new[] { typeof(bool) })!;
         showList = SongType.GetProperties(Instance).Single(p => !p.CanWrite && p.PropertyType.IsGenericType
             && p.PropertyType.GetGenericTypeDefinition().FullName == "Il2CppSystem.Collections.Generic.List`1");
         var chartType = showList.PropertyType.GenericTypeArguments[0];
@@ -52,11 +61,11 @@ internal sealed class GameAdapter
         var mask = Plugin.Selection;
         if (mask == Shared.StatusMask.All) return true;
         if (mask == Shared.StatusMask.None) return false;
-        // Use the same lazy local database-backed loading as the game's chart page.
-        // This also avoids relying on SongRecord.Searchwords, which can be stale
-        // after the game updates an individual ChartRecord.RankStatus.
-        scan.Invoke(song, new object[] { false });
         var mode = (PlayModeType)filterMode.GetValue(filter)!;
+        // This predicate runs inside RefreshDisplayList's write lock. Never
+        // enumerate directories, parse chart files or wait for an index here.
+        if (!(bool)fullLoaded.GetValue(song)!)
+            return StatusStore.Index.Matches(((SongRecord)songMeta.GetValue(song)!).Path,(int)mode,mask);
         foreach (var chart in Snapshot(showList.GetValue(song)!))
             if ((mode == PlayModeType.Max || (PlayModeType)chartMode.GetValue(chart)! == mode)
                 && Shared.StatusSelection.Matches(mask, ((ChartRecord)chartMeta.GetValue(chart)!).RankStatus)) return true;
@@ -66,13 +75,24 @@ internal sealed class GameAdapter
     public DisplayScope? FilterDisplay(object? song)
     {
         if (song is null || Plugin.Selection == Shared.StatusMask.All) return null;
-        scan.Invoke(song, new object[] { false });
+        // Only the single song being opened follows the game's normal lazy load.
+        if (!(bool)fullLoaded.GetValue(song)!) scan.Invoke(song, new object[] { false });
         var list = showList.GetValue(song)!;
         var original = Snapshot(list);
         var filtered = original.Where(c => Shared.StatusSelection.Matches(Plugin.Selection, ((ChartRecord)chartMeta.GetValue(c)!).RankStatus)).ToArray();
         var scope = new DisplayScope(this, list, original);
         try { Replace(list, filtered); return scope; }
         catch { scope.Dispose(); throw; }
+    }
+
+    internal bool RefreshAfterIndex()
+    {
+        var manager = managerInstance.GetValue(null);
+        if (manager is null || (bool)scanning.GetValue(manager)!) return false;
+        refresh.Invoke(manager,new object[] { true });
+        // The room panel does not subscribe to ChartLoaded like the lobby does.
+        foreach (var room in UnityEngine.Object.FindObjectsOfType<PanelRoomChart>()) room.RefreshList();
+        return true;
     }
 
     private object[] Snapshot(object list)

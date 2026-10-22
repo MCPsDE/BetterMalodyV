@@ -20,6 +20,12 @@ try {
     $managers = @($framework.Types | Where-Object { @($_.Methods | Where-Object Name -eq 'RefreshDisplayList').Count -eq 1 })
     if ($songs.Count -ne 1 -or $managers.Count -ne 1) { throw 'Song/manager shape is ambiguous' }
     $song = $songs[0]; $manager = $managers[0]
+    foreach ($contract in @(@($song,'get_FullLoaded'),@($manager,'get_Scanning'))) {
+        $methods = @($contract[0].Methods | Where-Object Name -eq $contract[1])
+        if ($methods.Count -ne 1 -or $methods[0].ReturnType.FullName -ne 'System.Boolean' -or $methods[0].Parameters.Count -ne 0) { throw "Status index lifecycle accessor changed: $($contract[1])" }
+    }
+    $singletons = @($manager.BaseType.Resolve().Properties | Where-Object { $_.SetMethod -and $_.GetMethod.IsStatic })
+    if ($singletons.Count -ne 1) { throw 'Manager instance field is ambiguous' }
     $show = @($song.Properties | Where-Object { !$_.SetMethod -and $_.PropertyType.FullName.StartsWith('Il2CppSystem.Collections.Generic.List`1') })
     if ($show.Count -ne 1) { throw 'ShowList contract changed' }
     $chartType = $show[0].PropertyType.GenericArguments[0].Resolve()

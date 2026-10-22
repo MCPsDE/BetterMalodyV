@@ -8,11 +8,30 @@ public sealed class SearchFilterController : MonoBehaviour
 {
     public SearchFilterController(IntPtr pointer) : base(pointer) { }
     private float nextScan;
+    private float nextIndex;
     private readonly HashSet<int> failures = new();
     public void Update()
     {
         if (Time.unscaledTime < nextScan) return;
         nextScan = Time.unscaledTime+.2f;
+        var store = Plugin.Adapter.StatusStore;
+        if (Time.unscaledTime >= nextIndex)
+        {
+            nextIndex = Time.unscaledTime+5;
+            store.RequestRefresh(BepInEx.Paths.GameRootPath);
+        }
+        if (store.RefreshPending)
+        {
+            var generation = store.Generation;
+            try
+            {
+                if (Plugin.Selection == Shared.StatusMask.All || Plugin.Adapter.RefreshAfterIndex()) store.MarkApplied(generation);
+            }
+            catch (Exception ex)
+            {
+                store.MarkApplied(generation); Plugin.Current.LogUiFailure(ex);
+            }
+        }
         Scan();
     }
     internal void Scan()
