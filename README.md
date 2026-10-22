@@ -4,9 +4,9 @@ Windows x64 / IL2CPP 版 Malody V 优化插件。首个功能：大厅和联机�
 
 [下载安装器](https://github.com/MCPsDE/BetterMalodyV/releases/latest) · [全部功能说明](docs/FEATURES.md)
 
-1. 退出游戏，运行 `BetterMalodyV-Setup-1.0.0.exe`，确认游戏目录并安装。
+1. 退出游戏，运行 `BetterMalodyV-Setup-1.0.1.exe`，确认游戏目录并安装。
 2. 安装器复用兼容的 BepInEx 6 IL2CPP；没有环境时离线安装随附的 `6.0.0-be.785`。
-3. 照常从 Steam 启动游戏，在高级搜索原有筛选器下勾选 Stable、Beta、Alpha（含 Promotion）。
+3. 照常从 Steam 启动游戏，打开右上角搜索，在输入框内部右侧勾选 Stable、Beta、Alpha（含 Promotion）；All 恢复全部。
 4. 桌面的「BetterMalodyV 管理面板」用于查看功能说明、赞助和检查更新。
 
 可以与 [MalodyVThemeLoader](https://github.com/MCPsDE/MalodyVThemeLoader) 共存，使用相同的运行环境。卸载时优先卸载各插件，最后再移除共享运行环境；主题加载器的旧安装器不识别其他插件的依赖关系。
@@ -23,7 +23,7 @@ Windows x64 / IL2CPP 版 Malody V 优化插件。首个功能：大厅和联机�
 pwsh -NoProfile -File scripts/prepare-dependencies.ps1
 dotnet build BetterMalodyV.slnx -c Release
 pwsh -NoProfile -File scripts/build-release.ps1
-pwsh -NoProfile -File scripts/test-installer.ps1 -InstallerExe artifacts/release/BetterMalodyV-Setup-1.0.0.exe
+pwsh -NoProfile -File scripts/test-installer.ps1 -InstallerExe artifacts/release/BetterMalodyV-Setup-1.0.1.exe
 pwsh -NoProfile -File scripts/test-runtime-reuse.ps1
 ```
 

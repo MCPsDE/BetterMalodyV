@@ -1,4 +1,5 @@
-param([string]$GameRoot = 'E:\Program Files (x86)\Steam\steamapps\common\MalodyV', [switch]$ReuseHost)
+param([string]$GameRoot = 'E:\Program Files (x86)\Steam\steamapps\common\MalodyV', [switch]$ReuseHost,
+    [int]$Width = 1440,[int]$Height = 900)
 $ErrorActionPreference = 'Stop'
 $repo = [IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..'))
 $hostRoot = Join-Path $repo 'artifacts\native-test'
@@ -19,8 +20,21 @@ $pluginRoot = Join-Path $hostRoot 'BepInEx\plugins\BetterMalodyV'
 New-Item -ItemType Directory -Force $pluginRoot | Out-Null
 Copy-Item (Join-Path $repo 'artifacts\native-test-build\bin\BetterMalodyV.Plugin\release\BetterMalodyV.*.dll') $pluginRoot
 $env:BETTER_MALODYV_TEST_OUTPUT = $hostRoot
+$env:BETTER_MALODYV_TEST_WIDTH = $Width.ToString()
+$env:BETTER_MALODYV_TEST_HEIGHT = $Height.ToString()
 try {
-    $process = Start-Process -FilePath (Join-Path $hostRoot 'Malody V.exe') -WorkingDirectory $hostRoot -WindowStyle Hidden -ArgumentList @('-batchmode','-screen-width','1440','-screen-height','900','-logFile',('"'+(Join-Path $hostRoot 'unity.log')+'"')) -PassThru
+    foreach ($name in @('result.json','search-filter-fixture.png')) {
+        $previous = Join-Path $hostRoot $name
+        if (Test-Path -LiteralPath $previous) { Remove-Item -LiteralPath $previous -Force }
+    }
+    $process = Start-Process -FilePath (Join-Path $hostRoot 'Malody V.exe') -WorkingDirectory $hostRoot -WindowStyle Hidden -ArgumentList @('-batchmode','-screen-width',$Width,'-screen-height',$Height,'-logFile',('"'+(Join-Path $hostRoot 'unity.log')+'"')) -PassThru
     $process.Id | Set-Content (Join-Path $hostRoot 'test-pid.txt')
     Write-Output "Isolated test started: PID $($process.Id), $hostRoot"
-} finally { Remove-Item Env:BETTER_MALODYV_TEST_OUTPUT }
+    if (!$process.WaitForExit(45000)) { throw 'Isolated runtime test did not complete within 45 seconds.' }
+    $result = Get-Content -LiteralPath (Join-Path $hostRoot 'result.json') -Raw | ConvertFrom-Json
+    if (!$result.passed) { throw $result.error }
+    $evidence = Join-Path $repo '.impeccable\review'
+    Copy-Item (Join-Path $hostRoot 'search-filter-fixture.png') (Join-Path $evidence "search-native-$($Width)x$Height.png") -Force
+    Copy-Item (Join-Path $hostRoot 'result.json') (Join-Path $evidence "search-native-$($Width)x$Height.json") -Force
+    Write-Output "PASS: $($result.checks.Count) native checks using the real search prefab at $($Width)x$Height."
+} finally { Remove-Item Env:BETTER_MALODYV_TEST_OUTPUT,Env:BETTER_MALODYV_TEST_WIDTH,Env:BETTER_MALODYV_TEST_HEIGHT }

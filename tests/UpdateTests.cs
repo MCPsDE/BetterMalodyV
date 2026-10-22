@@ -39,13 +39,18 @@ sealed class Fixture(string scenario) : HttpMessageHandler
         if(path.EndsWith("/latest"))
         {
             if(scenario == "limited") return Task.FromResult(new HttpResponseMessage(HttpStatusCode.Forbidden));
-            var version = scenario == "same" ? "1.0.0" : scenario == "older" ? "0.9.0" : "1.0.1";
+            var current = typeof(Fixture).Assembly.GetName().Version!;
+            var version = scenario == "same" ? current.ToString(3) : scenario == "older" ? "0.9.0" : NextVersion;
             var assets = new List<object> { new { name=$"BetterMalodyV-Setup-{version}.exe", browser_download_url="https://fixture.test/installer" } };
             if(scenario != "missing") assets.Add(new { name="SHA256SUMS.txt", browser_download_url="https://fixture.test/checksum" });
             return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK) { Content = new StringContent(JsonSerializer.Serialize(new { tag_name="v"+version,assets })) });
         }
         var content = path == "/installer" ? (HttpContent)new ByteArrayContent(Payload)
-            : new StringContent((scenario == "bad-hash" ? new string('0',64) : Convert.ToHexString(SHA256.HashData(Payload))) + "  BetterMalodyV-Setup-1.0.1.exe\n");
+            : new StringContent((scenario == "bad-hash" ? new string('0',64) : Convert.ToHexString(SHA256.HashData(Payload))) + $"  BetterMalodyV-Setup-{NextVersion}.exe\n");
         return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK) { Content=content });
+    }
+    private static string NextVersion
+    {
+        get { var v = typeof(Fixture).Assembly.GetName().Version!; return new Version(v.Major,v.Minor,v.Build+1).ToString(); }
     }
 }

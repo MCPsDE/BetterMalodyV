@@ -4,7 +4,7 @@
 
 - **Manager — Read:** Malody V players ask what the installed plugin changes and how to use its filters. One selectable, scrolling document comes from editable local Markdown, with embedded fallback. Headings and lists provide wayfinding; refresh/F5 and update checking are supporting commands. The fixed footer carries appearance and sponsorship.
 - **Installer — Operate:** Players select or correct the game directory, inspect BepInEx compatibility, then install/repair, open the manager or uninstall. Path diagnosis, environment feedback and a scrollable log support the task. The primary install/repair action, progress and concise operation status stay outside the content viewport. Invalid, installed, busy, completed and failed states govern available commands.
-- **Game extension — Operate:** The existing advanced-search panel receives combinable Stable/Beta/Alpha native toggles and an All reset. It retains the search input's TMP font, readable English fallback and measured width-based row wrapping. The fixture is isolated test data, not a full lobby or multiplayer capture.
+- **Game extension — Operate:** The existing advanced-search input receives combinable Stable/Beta/Alpha native toggles and an All reset inside its right edge. It retains the input's TMP font, size and ink, measures full labels and reserves a separate left textViewport. An active-panel controller also mounts controls when native Show calls are inlined. The test instantiates the actual shipped prefab in an isolated IL2CPP host, with synthetic chart records; this is not a real multiplayer session.
 
 ## Direction contract
 

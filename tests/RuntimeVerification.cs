@@ -6,9 +6,11 @@ using Malody.Chart;
 using Malody.DB;
 using Malody.Scene;
 using Malody.Scene.Panel;
+using Malody.Manager;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
+using UnityEngine.EventSystems;
 
 namespace BetterMalodyV.Plugin;
 
@@ -17,10 +19,14 @@ public sealed class RuntimeVerification : MonoBehaviour
 {
     public RuntimeVerification(IntPtr pointer) : base(pointer) { }
     private bool ran;
-    private int frames;
+    private float captureAt = float.PositiveInfinity;
+    private float exitAt = float.PositiveInfinity;
     private static string Root => Environment.GetEnvironmentVariable("BETTER_MALODYV_TEST_OUTPUT")!;
     private readonly List<string> checks = new();
     private Camera? captureCamera;
+    private PanelSearchSong? realPanel;
+    private static int Width => int.TryParse(Environment.GetEnvironmentVariable("BETTER_MALODYV_TEST_WIDTH"),out var width) ? width : 1440;
+    private static int Height => int.TryParse(Environment.GetEnvironmentVariable("BETTER_MALODYV_TEST_HEIGHT"),out var height) ? height : 900;
     public static void Install(Plugin plugin, Harmony harmony)
     {
         if (string.IsNullOrWhiteSpace(Root)) throw new InvalidOperationException("Verification output required");
@@ -32,31 +38,38 @@ public sealed class RuntimeVerification : MonoBehaviour
     {
         if (ran)
         {
-            frames++;
-            if (frames == 8 && captureCamera is not null)
+            if (Time.unscaledTime >= captureAt && captureCamera is not null)
             {
+                captureAt = float.PositiveInfinity;
+                try { ValidateRealPanel(); }
+                catch (Exception ex) { WriteResult(ex); }
                 Canvas.ForceUpdateCanvases(); captureCamera.Render();
                 RenderTexture.active = captureCamera.targetTexture;
-                var image = new Texture2D(1440,900,TextureFormat.RGB24,false);
-                image.ReadPixels(new Rect(0,0,1440,900),0,0); image.Apply();
+                var image = new Texture2D(Width,Height,TextureFormat.RGB24,false);
+                image.ReadPixels(new Rect(0,0,Width,Height),0,0); image.Apply();
                 File.WriteAllBytes(Path.Combine(Root,"search-filter-fixture.png"),ImageConversion.EncodeToPNG(image));
                 RenderTexture.active = null;
+                exitAt = Time.unscaledTime+.2f;
             }
-            if (frames > 24) Application.Quit();
+            if (Time.unscaledTime >= exitAt) Application.Quit();
             return;
         }
         ran = true;
         try
         {
             TestNativeData(); TestControls();
-            File.WriteAllText(Path.Combine(Root,"result.json"),JsonSerializer.Serialize(new { passed = true, checks },new JsonSerializerOptions { WriteIndented = true }));
+            captureAt = Time.unscaledTime+1.2f;
         }
         catch (Exception ex)
         {
-            File.WriteAllText(Path.Combine(Root,"result.json"),JsonSerializer.Serialize(new { passed = false, error = ex.ToString(), checks }));
+            WriteResult(ex);
+            exitAt = Time.unscaledTime+.2f;
         }
     }
     private void Check(bool condition,string label) { if (!condition) throw new Exception(label); checks.Add(label); }
+    [Il2CppInterop.Runtime.Attributes.HideFromIl2Cpp]
+    private void WriteResult(Exception? error = null) => File.WriteAllText(Path.Combine(Root,"result.json"),
+        JsonSerializer.Serialize(new { passed = error is null,error = error?.ToString(),checks },new JsonSerializerOptions { WriteIndented = true }));
     private void TestNativeData()
     {
         var adapter = Plugin.Adapter;
@@ -114,35 +127,74 @@ public sealed class RuntimeVerification : MonoBehaviour
     private void TestControls()
     {
         captureCamera = new GameObject("VerificationCamera").AddComponent<Camera>();
-        captureCamera.transform.position = new Vector3(0,0,-10); captureCamera.orthographic = true; captureCamera.orthographicSize = 450;
-        captureCamera.targetTexture = new RenderTexture(1440,900,24);
+        captureCamera.transform.position = new Vector3(0,0,-10); captureCamera.orthographic = true; captureCamera.orthographicSize = Height/2f;
+        captureCamera.targetTexture = new RenderTexture(Width,Height,24);
         captureCamera.clearFlags = CameraClearFlags.SolidColor; captureCamera.backgroundColor = new Color(.04f,.05f,.07f,1);
         UnityEngine.Object.DontDestroyOnLoad(captureCamera.gameObject);
         var canvas = new GameObject("VerificationCanvas").AddComponent<Canvas>();
         canvas.renderMode = RenderMode.ScreenSpaceCamera; canvas.worldCamera = captureCamera; canvas.planeDistance = 1; canvas.sortingOrder = 32767;
         UnityEngine.Object.DontDestroyOnLoad(canvas.gameObject);
         canvas.gameObject.AddComponent<GraphicRaycaster>();
-        var root = new GameObject("Search fixture"); root.SetActive(false);
-        var rect = root.AddComponent<RectTransform>(); rect.SetParent(canvas.transform,false);
-        rect.sizeDelta = new Vector2(1180,450);
-        root.AddComponent<Image>().color = new Color(.09f,.11f,.14f,1);
-        var panel = root.AddComponent<PanelSearchSong>();
-        var side = new GameObject("side").AddComponent<RectTransform>(); side.SetParent(rect,false); side.sizeDelta = new Vector2(1180,335);
-        var middle = new GameObject("middle").AddComponent<RectTransform>(); middle.SetParent(side,false);
-        middle.sizeDelta = new Vector2(1100,190);
-        var input = new GameObject("input").AddComponent<TMP_InputField>(); input.transform.SetParent(rect,false);
-        var label = new GameObject("text").AddComponent<TextMeshProUGUI>(); label.transform.SetParent(input.transform,false);
-        label.font = TMP_Settings.defaultFontAsset; input.textComponent = label; panel.input = input;
+        var scaler = canvas.gameObject.AddComponent<CanvasScaler>();
+        scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
+        scaler.referenceResolution = new Vector2(1440,900);
+        scaler.matchWidthOrHeight = 0;
+        var front = UnityEngine.Object.FindObjectOfType<FrontLayerManager>();
+        Check(front != null,"Found real FrontLayerManager from installed game scene");
+        var prefab = front!.prefabs[(int)FrontLayerManager.PrefabType.SearchAdv];
+        Check(prefab.GetComponent<PanelSearchSong>() != null,"Using actual shipped advanced-search prefab");
+        var root = UnityEngine.Object.Instantiate(prefab,canvas.transform,false);
+        realPanel = root.GetComponent<PanelSearchSong>();
+        realPanel.input.text = "Search text remains editable";
+        // Deliberately do NOT call Show/Attach. The shipping controller must
+        // discover this normally enabled prefab even when Show was inlined.
+        root.SetActive(true);
+    }
+
+    private void ValidateRealPanel()
+    {
+        var panel = realPanel ?? throw new Exception("Real search panel was not instantiated");
+        var root = panel.gameObject;
+        var input = panel.input;
+        var controls = input.transform.Find(SearchFilterUi.RootName);
+        Check(controls != null,"Shipping controller discovered actual native panel without Show hook");
+        var originalOffset = input.textViewport.offsetMax;
         SearchFilterUi.Attach(panel); SearchFilterUi.Attach(panel);
-        Check(middle.childCount == 1,"Repeated panel open does not duplicate status controls");
+        Check(input.transform.childCount > 1 && input.textViewport.offsetMax == originalOffset,"Repeated discovery does not duplicate or shrink text viewport");
         var toggles = root.GetComponentsInChildren<Toggle>(true);
         Check(toggles.Length == 3,"Three native status checkboxes");
-        toggles[0].isOn = false;
+        var events = EventSystem.current;
+        var pointer = new PointerEventData(events) { button = PointerEventData.InputButton.Left };
+        toggles[0].OnPointerClick(pointer);
         Check(Plugin.Selection == (StatusMask.Alpha | StatusMask.Beta),"Checkbox persists combined selection");
         toggles[1].isOn = false; toggles[2].isOn = false;
         Check(Plugin.Selection == StatusMask.None,"Unchecking all yields empty selection");
-        var button = root.GetComponentInChildren<Button>(true); button.onClick.Invoke();
+        var button = controls!.GetComponentInChildren<Button>(true); button.onClick.Invoke();
         Check(Plugin.Selection == StatusMask.All,"All button resets status selection");
-        root.SetActive(true);
+        var controlRect = controls.GetComponent<RectTransform>();
+        var inputRect = input.GetComponent<RectTransform>();
+        Check(input.textViewport.rect.width >= 200,"Actual search retains at least 200 units of editable text");
+        var corners = new Il2CppInterop.Runtime.InteropTypes.Arrays.Il2CppStructArray<Vector3>(4);
+        controlRect.GetWorldCorners(corners);
+        foreach(var corner in corners)
+        {
+            Check(inputRect.rect.Contains((Vector2)inputRect.InverseTransformPoint(corner)),"Status controls fit inside actual search input");
+            var point = captureCamera!.WorldToViewportPoint(corner);
+            Check(point.x >= 0 && point.x <= 1 && point.y >= 0 && point.y <= 1,"Settled controls fit inside the captured viewport");
+        }
+        foreach(var label in controls.GetComponentsInChildren<TextMeshProUGUI>())
+            Check(label.GetPreferredValues(label.text).x <= label.rectTransform.rect.width,"Full one-line status label fits: "+label.text);
+        Check(input.text == "Search text remains editable","Attaching controls preserves search text");
+        var text = new string('W',120); input.text = text;
+        Check(input.text == text,"Long search text remains editable");
+        input.ActivateInputField();
+        Check(input.interactable,"Search field remains interactable");
+        var selected = new BaseEventData(events);
+        toggles[0].OnSelect(selected);
+        toggles[0].OnSubmit(selected);
+        Check(Plugin.Selection == (StatusMask.Alpha|StatusMask.Beta),"Native keyboard submit toggles Stable");
+        button.onClick.Invoke();
+        input.text = "Search";
+        WriteResult();
     }
 }

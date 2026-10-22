@@ -14,7 +14,11 @@
 
 歌曲内列表只在大厅 `SceneChart.Refresh` 状态机的同步 MoveNext 与联机 `PanelRoomChart.OpenChart` 执行期间暂时收窄 ShowList；完成或异常时立即恢复。这样实际原生列表与选中索引都按过滤后条目生成，且后台完整谱面映射、编辑和通过 hash 访问不受影响。所有临时修改均在 UI 主线程。
 
-搜索 UI 加在双方共用的 PanelSearchSong。原筛选区扩展一行，新增 Unity 原生 Toggle。配置保存为 `BepInEx/config/com.mcpsde.bettermalodyv.cfg` 的 Search/StatusMask，0=空、7=全部（含未知）。
+搜索 UI 加在双方共用的 PanelSearchSong.input 内部右侧，使用原输入字体、按真实文字宽度排列 Unity 原生 Toggle；textViewport 留出控件宽度，输入内容/光标/占位符不与勾选框重叠。1.0.1 不再依赖 side/middle 层级或向下扩展被裁切的筛选区。Alpha 标签包含 Promotion，All 恢复全部。
+
+IL2CPP 可能内联极短的 Show；当前 interop 的 Show 标注 CallerCount(0)，因此除原 Show postfix 外，SearchFilterController 每 0.2 秒只查找活动 PanelSearchSong，按 input 引用补挂缺失控件，重复打开保持幂等。成功挂载写入面板名、控件宽度与输入区宽度；同一实例失败只记录一次。原生验证直接使用当前游戏 FrontLayerManager 引用的 SearchAdv 预制体，并刻意不调用 Show，验证实际控制器能自动发现。
+
+配置保存为 `BepInEx/config/com.mcpsde.bettermalodyv.cfg` 的 Search/StatusMask，0=空、7=全部（含未知）。
 
 ## 安装与更新
 

@@ -528,7 +528,7 @@
       "kind": "custom",
       "refersTo": "document",
       "description": "Browser illustration of the native read-only RichTextBox; source Markdown remains editable outside the manager.",
-      "html": "<article class=\"ds-document\" tabindex=\"0\" aria-label=\"BetterMalodyV 优化与修改说明\"><h1>BetterMalodyV</h1><p>让选曲更顺手。这里列出插件当前提供的全部优化与修改。</p><h2>按谱面状态筛选</h2><p>在大厅与联机房间的高级搜索中，原有等级、BPM、时长筛选器下方新增「谱面状态」。</p></article>",
+      "html": "<article class=\"ds-document\" tabindex=\"0\" aria-label=\"BetterMalodyV 优化与修改说明\"><h1>BetterMalodyV</h1><p>让选曲更顺手。这里列出插件当前提供的全部优化与修改。</p><h2>按谱面状态筛选</h2><p>在大厅与联机房间的高级搜索中，搜索输入框内部右侧新增 Stable、Beta、Alpha 勾选框和 All 按钮。</p></article>",
       "css": ".ds-document{background:#181818;color:#F5F5F5;font:10.5pt 'Microsoft YaHei UI','Segoe UI Variable Text','Segoe UI',sans-serif;max-height:280px;overflow-y:auto;user-select:text}.ds-document h1{font-size:23pt;font-weight:700;margin:0 0 1em}.ds-document h2{font-size:16pt;font-weight:700;margin:1em 0}.ds-document p{margin:0 0 1em}.ds-document:focus-visible{outline:1px dotted #B8B8B8;outline-offset:2px}"
     },
     {
