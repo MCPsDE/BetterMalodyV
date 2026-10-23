@@ -8,7 +8,7 @@ using Malody.Scene.Panel;
 
 namespace BetterMalodyV.Plugin;
 
-[BepInPlugin("com.mcpsde.bettermalodyv", "BetterMalodyV", "1.1.0")]
+[BepInPlugin("com.mcpsde.bettermalodyv", "BetterMalodyV", "1.1.1")]
 public sealed class Plugin : BasePlugin
 {
     internal static Plugin Current = null!;
