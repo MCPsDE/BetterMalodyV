@@ -306,7 +306,7 @@ internal static class ReplayAnalysisView
                     Text("漏判", "Misses") + " " + profile.Misses.ToString("N0"),
                     Text("平均偏移", "Mean error") + " " + Signed(profile.MeanError)
                 }), 12, FontStyles.Normal, MutedColor, 24, true);
-                AddTimeline(layout.transform, profile.Points, 62);
+                AddTimeline(layout.transform, profile, 62);
             }
         }
         if (session.Analysis.Profiles.Count == 0)
@@ -400,7 +400,19 @@ internal static class ReplayAnalysisView
         var element = graph.AddComponent<LayoutElement>();
         element.preferredHeight = height;
         element.minHeight = height;
-        var max = histogram.Counts.Count == 0 ? 0 : histogram.Counts.Max();
+        if (histogram.Bins.Count == 0) return;
+
+        var binEnds = Enumerable.Range(0, histogram.Bins.Count)
+            .Select(index => HistogramBinEnd(histogram.Bins, index)).ToArray();
+        var densities = histogram.Bins.Select((bin, index) =>
+        {
+            var width = binEnds[index] - bin.Start;
+            return width > 0 ? bin.Count / width : 0;
+        }).ToArray();
+        var maxDensity = densities.Max();
+        var axisStart = histogram.Bins[0].Start;
+        var axisEnd = binEnds[^1];
+        var axisSpan = axisEnd - axisStart;
         var baseline = signed ? .5f : .06f;
         var rule = Image(graph.transform, "Baseline", BorderColor);
         var ruleRect = rule.rectTransform;
@@ -410,47 +422,93 @@ internal static class ReplayAnalysisView
         ruleRect.sizeDelta = new Vector2(-16, 1);
         ruleRect.anchoredPosition = Vector2.zero;
 
-        for (var index = 0; index < histogram.Counts.Count; index++)
+        for (var index = 0; index < histogram.Bins.Count; index++)
         {
-            var count = histogram.Counts[index];
-            if (count <= 0 || max == 0) continue;
-            var x0 = index / (float)histogram.Counts.Count;
-            var x1 = (index + 1) / (float)histogram.Counts.Count;
-            var value = HistogramCenter(histogram.Labels[index]);
-            var negative = signed && value < 0;
+            var bin = histogram.Bins[index];
+            if (bin.Count <= 0 || maxDensity <= 0 || axisSpan <= 0) continue;
+            var x0 = (float)((bin.Start - axisStart) / axisSpan);
+            var x1 = (float)((binEnds[index] - axisStart) / axisSpan);
+            var negative = signed && (bin.Start + binEnds[index]) / 2 < 0;
             var bar = Image(graph.transform, "Bin " + index, signed ? negative ? PinkColor : CyanColor : CyanColor);
             var barRect = bar.rectTransform;
             barRect.anchorMin = new Vector2(x0, baseline);
             barRect.anchorMax = new Vector2(x1, baseline);
             barRect.pivot = new Vector2(.5f, negative ? 1 : 0);
             var maxHeight = signed ? height * .39f : height * .78f;
-            barRect.sizeDelta = new Vector2(-3, Math.Max(2, maxHeight * count / max));
+            barRect.sizeDelta = new Vector2(-3, Math.Max(2, maxHeight * (float)(densities[index] / maxDensity)));
             barRect.anchoredPosition = Vector2.zero;
             var color = bar.color;
             color.a = .86f;
             bar.color = color;
         }
 
-        var labels = Horizontal(parent, 0, 0, 0, 0, 0);
-        labels.GetComponent<LayoutElement>().preferredHeight = 18;
-        var midpoint = histogram.Labels.Count == 0 ? "0" : histogram.Labels[histogram.Labels.Count / 2].Split(' ')[0].Split('–')[0];
-        AddText(labels.transform, signed ? "-180" : "0", 10, FontStyles.Normal, SubtleColor, 16, false, 1);
-        AddText(labels.transform, signed ? "0" : midpoint, 10, FontStyles.Normal, SubtleColor, 16, false, 1);
-        AddText(labels.transform, signed ? "+180" : histogram.Labels.LastOrDefault()?.Split(' ')[0] ?? "0", 10, FontStyles.Normal, SubtleColor, 16, false, 1);
+        AddHistogramAxis(parent, histogram, signed, axisStart, axisEnd);
     }
 
-    private static double HistogramCenter(string label)
+    private static double HistogramBinEnd(IReadOnlyList<ReplayHistogramBin> bins, int index)
     {
-        var token = label.Split(' ')[0];
-        var separator = token.IndexOf('–');
-        if (separator > 0
-            && double.TryParse(token[..separator], System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out var left)
-            && double.TryParse(token[(separator + 1)..], System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out var right))
-            return (left + right) / 2;
-        return 0;
+        var bin = bins[index];
+        if (double.IsFinite(bin.End)) return bin.End;
+        var previous = index > 0 ? bins[index - 1] : bin;
+        var width = double.IsFinite(previous.End) ? previous.End - previous.Start : 1;
+        return bin.Start + Math.Max(1, width);
     }
 
-    private static void AddTimeline(Transform parent, IReadOnlyList<ReplayProfilePoint> points, float height)
+    private static void AddHistogramAxis(Transform parent, ReplayHistogram histogram, bool signed, double start, double end)
+    {
+        var axis = NewRect("HistogramAxis", parent);
+        var rect = axis.GetComponent<RectTransform>();
+        rect.anchorMin = new Vector2(0, 1);
+        rect.anchorMax = new Vector2(1, 1);
+        rect.pivot = new Vector2(.5f, 1);
+        rect.sizeDelta = new Vector2(0, 18);
+        var element = axis.AddComponent<LayoutElement>();
+        element.preferredHeight = 18;
+        element.minHeight = 18;
+
+        if (signed)
+        {
+            for (var index = 0; index <= 4; index++)
+            {
+                var value = start + (end - start) * index / 4;
+                var label = $"{(value > 0 ? "+" : string.Empty)}{value:0} {histogram.Unit}";
+                AddAxisLabel(axis.transform, label, (float)index / 4, 80,
+                    index == 0 ? TextAlignmentOptions.Left : index == 4 ? TextAlignmentOptions.Right : TextAlignmentOptions.Center);
+            }
+            return;
+        }
+
+        var overflow = histogram.Bins[^1];
+        if (!double.IsPositiveInfinity(overflow.End))
+        {
+            for (var index = 0; index <= 4; index++)
+            {
+                var value = start + (end - start) * index / 4;
+                AddAxisLabel(axis.transform, $"{value:0} {histogram.Unit}", (float)index / 4, 88,
+                    index == 0 ? TextAlignmentOptions.Left : index == 4 ? TextAlignmentOptions.Right : TextAlignmentOptions.Center);
+            }
+            return;
+        }
+
+        var threshold = overflow.Start;
+        var midpoint = start + (threshold - start) / 2;
+        AddAxisLabel(axis.transform, $"{start:0} {histogram.Unit}", 0, 82, TextAlignmentOptions.Left);
+        AddAxisLabel(axis.transform, $"{midpoint:0} {histogram.Unit}", (float)((midpoint - start) / (end - start)), 88,
+            TextAlignmentOptions.Center);
+        AddAxisLabel(axis.transform, $"{threshold:0} {histogram.Unit}", (float)((threshold - start) / (end - start)), 82,
+            TextAlignmentOptions.Center);
+        AddAxisLabel(axis.transform, $"{threshold:0}+ {histogram.Unit}", 1, 88, TextAlignmentOptions.Right);
+    }
+
+    private static void AddAxisLabel(Transform parent, string label, float x, float width, TextAlignmentOptions alignment)
+    {
+        var text = AddAnchoredText(parent, label, 10, FontStyles.Normal, SubtleColor,
+            Vector2.zero, new Vector2(x, 1), new Vector2(x, 1), new Vector2(width, 18));
+        text.rectTransform.pivot = new Vector2(x <= 0 ? 0 : x >= 1 ? 1 : .5f, 1);
+        text.alignment = alignment;
+    }
+
+    private static void AddTimeline(Transform parent, ReplayProfileScore profile, float height)
     {
         var graph = NewRect("AccuracyTimeline", parent);
         graph.AddComponent<Image>();
@@ -460,13 +518,14 @@ internal static class ReplayAnalysisView
         var element = graph.AddComponent<LayoutElement>();
         element.preferredHeight = height;
         element.minHeight = height;
-        for (var index = 0; index < points.Count; index++)
+        var span = profile.ChartEndMs - profile.ChartStartMs;
+        for (var index = 0; index < profile.Points.Count; index++)
         {
-            var point = points[index];
+            var point = profile.Points[index];
             var bar = Image(graph.transform, "Point " + index, CyanColor);
             var barRect = bar.rectTransform;
-            var x0 = index / (float)points.Count;
-            var x1 = (index + 1) / (float)points.Count;
+            var x0 = span <= 0 ? .5f - 1f / 128 : Mathf.Clamp01((float)((point.StartTimeMs - profile.ChartStartMs) / span));
+            var x1 = span <= 0 ? .5f + 1f / 128 : Mathf.Clamp01((float)((point.EndTimeMs - profile.ChartStartMs) / span));
             var value = Mathf.Clamp01((float)point.Accuracy);
             barRect.anchorMin = new Vector2(x0, 0);
             barRect.anchorMax = new Vector2(x1, 0);
@@ -479,9 +538,19 @@ internal static class ReplayAnalysisView
         }
         var axis = Horizontal(parent, 0, 0, 0, 0, 0);
         axis.GetComponent<LayoutElement>().preferredHeight = 18;
-        AddText(axis.transform, Text("开局", "Start"), 10, FontStyles.Normal, SubtleColor, 16, false, 1);
-        AddText(axis.transform, Text("逐音符准确率 · 时间 →", "Per-note accuracy · time →"), 10, FontStyles.Normal, SubtleColor, 16, false, 1);
-        AddText(axis.transform, Text("结束", "End"), 10, FontStyles.Normal, SubtleColor, 16, false, 1);
+        AddText(axis.transform, "0:00", 10, FontStyles.Normal, SubtleColor, 16, false, 1);
+        var middle = AddText(axis.transform, Text("逐音符准确率 · 用时", "Per-note accuracy · elapsed time"), 10,
+            FontStyles.Normal, SubtleColor, 16, false, 1);
+        middle.alignment = TextAlignmentOptions.Center;
+        var end = AddText(axis.transform, TimelineTime(span), 10, FontStyles.Normal, SubtleColor, 16, false, 1);
+        end.alignment = TextAlignmentOptions.Right;
+    }
+
+    private static string TimelineTime(double milliseconds)
+    {
+        if (!double.IsFinite(milliseconds) || milliseconds <= 0) return "0:00";
+        var totalSeconds = (long)Math.Floor(milliseconds / 1000);
+        return $"{totalSeconds / 60}:{totalSeconds % 60:00}";
     }
 
     private static void AddWarnings(Transform parent, IReadOnlyList<string> warnings)

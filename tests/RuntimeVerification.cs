@@ -146,8 +146,29 @@ public sealed class RuntimeVerification : MonoBehaviour
                     }
                     if(replayAnalysisCapture==0)Check(labels.Any(label=>label.text.Contains("总偏移") || label.text.Contains("Total offset")),"Overview displays signed offset statistics");
                     if(replayAnalysisCapture==1)Check(labels.Any(label=>label.text.Contains("逐轨偏移") || label.text.Contains("Offset by track")),"Track section is rendered");
-                    if(replayAnalysisCapture==2)Check(labels.Any(label=>label.text.Contains("按压时长") || label.text.Contains("Press duration")),"Press section is rendered");
-                    if(replayAnalysisCapture==3)Check(labels.Any(label=>label.text.Contains("Baka-e")),"Judgement section includes CVT profile results");
+                    if(replayAnalysisCapture==2)
+                    {
+                        Check(labels.Any(label=>label.text.Contains("按压时长") || label.text.Contains("Press duration")),"Press section is rendered");
+                        Check(labels.Any(label=>label.text=="500+ ms") && labels.Any(label=>label.text=="1000+ ms"),"Press charts label their overflow ranges");
+                        var histograms=page.GetComponentsInChildren<RectTransform>(true).Where(rect=>rect.name=="Histogram" && rect.gameObject.activeInHierarchy).ToArray();
+                        Check(histograms.Length>=2,"Duration and interval histograms are rendered");
+                        var durationBin=histograms[0].GetComponentsInChildren<RectTransform>(true).Single(rect=>rect.name=="Bin 3");
+                        Check(Math.Abs(durationBin.anchorMin.x-60f/700)<.001f && Math.Abs(durationBin.anchorMax.x-80f/700)<.001f,
+                            "Duration bars use the 60-80 ms chart coordinates");
+                        var intervalOverflow=histograms[1].GetComponentsInChildren<RectTransform>(true).Single(rect=>rect.name=="Bin 9");
+                        Check(Math.Abs(intervalOverflow.anchorMin.x-2f/3)<.001f && Math.Abs(intervalOverflow.anchorMax.x-1)<.001f,
+                            "Interval overflow is placed after the 1000 ms threshold");
+                    }
+                    if(replayAnalysisCapture==3)
+                    {
+                        Check(labels.Any(label=>label.text.Contains("Baka-e")),"Judgement section includes CVT profile results");
+                        Check(labels.Any(label=>label.text=="0:12"),"CVT time axis displays elapsed chart duration");
+                        var timeline=page.GetComponentsInChildren<RectTransform>(true).First(rect=>rect.name=="AccuracyTimeline" && rect.gameObject.activeInHierarchy);
+                        var points=timeline.GetComponentsInChildren<RectTransform>(true).Where(rect=>rect.name.StartsWith("Point ",StringComparison.Ordinal)).ToArray();
+                        var ordered=points.OrderBy(rect=>rect.anchorMin.x).ToArray();
+                        Check(points.Length<32 && ordered.Zip(ordered.Skip(1),(left,right)=>left.anchorMax.x<right.anchorMin.x-.0001f).Any(gap=>gap),
+                            "CVT chart omits empty periods and retains their real time gap");
+                    }
                     Canvas.ForceUpdateCanvases();captureCamera.Render();RenderTexture.active=captureCamera.targetTexture;
                     var bitmap=new Texture2D(Width,Height,TextureFormat.RGB24,false);bitmap.ReadPixels(new Rect(0,0,Width,Height),0,0);bitmap.Apply();
                     var names=new[]{"overview","tracks","presses","profiles"};
@@ -278,7 +299,7 @@ public sealed class RuntimeVerification : MonoBehaviour
         var chart=new List<ReplayChartNote>();var actions=new List<ReplayInputAction>();var hits=new List<ReplayHitEvent>();
         for(var index=0;index<32;index++)
         {
-            var lane=index%4;var time=5000+index*250;
+            var lane=index%4;var time=5000+index*250+(index>=16?5000:0);
             chart.Add(new(time,lane));actions.Add(new(time+6,lane,true));actions.Add(new(time+74,lane,false));
             hits.Add(new(time+6,lane,ReplayAnalysisEngine.GameJudgementFlags.Best));
         }

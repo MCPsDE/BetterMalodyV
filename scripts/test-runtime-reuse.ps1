@@ -1,9 +1,10 @@
-param([string]$InstallerDll = '', [string]$PayloadZip = '')
+param([string]$InstallerDll = '', [string]$PayloadZip = '', [string]$TestRoot = '')
 $ErrorActionPreference = 'Stop'
 $repo = [IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..'))
 if (!$InstallerDll) { $InstallerDll = Join-Path $repo 'artifacts\installer-build\bin\BetterMalodyV.Installer\release_win-x64\BetterMalodyV.Installer.dll' }
 if (!$PayloadZip) { $PayloadZip = Join-Path $repo 'artifacts\payload.zip' }
-$testRoot = [IO.Path]::GetFullPath((Join-Path $repo 'artifacts\runtime-reuse-test'))
+if (!$TestRoot) { $TestRoot = Join-Path $repo 'artifacts\runtime-reuse-test' }
+$testRoot = [IO.Path]::GetFullPath($TestRoot)
 $allowed = [IO.Path]::GetFullPath((Join-Path $repo 'artifacts')).TrimEnd('\') + '\'
 if (!$testRoot.StartsWith($allowed,[StringComparison]::OrdinalIgnoreCase)) { throw 'Unsafe test root.' }
 if (Test-Path $testRoot) { Remove-Item -LiteralPath $testRoot -Recurse -Force }

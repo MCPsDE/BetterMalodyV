@@ -185,16 +185,9 @@ public static class ReplayAnalysisEngine
             if (index >= 0 && index < counts.Length) counts[index]++;
         }
 
-        var labels = new string[counts.Length];
-        for (var i = 0; i < labels.Length; i++)
-        {
-            var left = bounds[i];
-            var right = bounds[i + 1];
-            labels[i] = double.IsPositiveInfinity(right)
-                ? $"{left:0}+ {unit}"
-                : $"{left:0}–{right:0} {unit}";
-        }
-        return new(labels, counts);
+        var bins = new ReplayHistogramBin[counts.Length];
+        for (var i = 0; i < bins.Length; i++) bins[i] = new(bounds[i], bounds[i + 1], counts[i]);
+        return new(bins, unit);
     }
 
     private static Dictionary<int, MatchedNote> MatchHeads(
@@ -439,6 +432,7 @@ public static class ReplayAnalysisEngine
         var accuracy = objects.Count == 0 ? 0 : objects.Average(item => item.Accuracy);
         var misses = objects.Count(item => item.Accuracy == 0);
         var headErrors = heads.Values.ToArray();
+        var timeline = BuildProfilePoints(objects);
         return new(
             profile.Group,
             profile.Label,
@@ -447,17 +441,23 @@ public static class ReplayAnalysisEngine
             misses,
             headErrors.Length == 0 ? 0 : headErrors.Average(),
             profile.WindowLabel,
-            BuildProfilePoints(objects));
+            timeline.StartMs,
+            timeline.EndMs,
+            timeline.Points);
     }
 
-    private static IReadOnlyList<ReplayProfilePoint> BuildProfilePoints(IReadOnlyList<ScoredObject> objects)
+    private sealed record ProfileTimeline(double StartMs, double EndMs, IReadOnlyList<ReplayProfilePoint> Points);
+
+    private static ProfileTimeline BuildProfilePoints(IReadOnlyList<ScoredObject> objects)
     {
-        if (objects.Count == 0) return Array.Empty<ReplayProfilePoint>();
-        const int pointCount = 64;
+        if (objects.Count == 0) return new(0, 0, Array.Empty<ReplayProfilePoint>());
+        const int maxPointCount = 64;
         var ordered = objects.OrderBy(item => item.TimeMs).ToArray();
         var first = ordered[0].TimeMs;
         var last = ordered[^1].TimeMs;
-        if (last <= first) return new[] { new ReplayProfilePoint(first, ordered.Average(item => item.Accuracy)) };
+        if (last <= first)
+            return new(first, last, new[] { new ReplayProfilePoint(first, last, ordered.Average(item => item.Accuracy), ordered.Length) });
+        var pointCount = Math.Min(maxPointCount, ordered.Length);
         var buckets = new (double Sum, int Count)[pointCount];
         foreach (var item in ordered)
         {
@@ -465,9 +465,15 @@ public static class ReplayAnalysisEngine
             buckets[index].Sum += item.Accuracy;
             buckets[index].Count++;
         }
-        return buckets.Select((bucket, index) => new ReplayProfilePoint(
-            first + (last - first) * index / (pointCount - 1),
-            bucket.Count == 0 ? 0 : bucket.Sum / bucket.Count)).ToArray();
+        var points = buckets.Select((bucket, index) => (bucket, index))
+            .Where(item => item.bucket.Count > 0)
+            .Select(item => new ReplayProfilePoint(
+                first + (last - first) * item.index / pointCount,
+                item.index == pointCount - 1 ? last : first + (last - first) * (item.index + 1) / pointCount,
+                item.bucket.Sum / item.bucket.Count,
+                item.bucket.Count))
+            .ToArray();
+        return new(first, last, points);
     }
 
     private static double ProfileAccuracy(Profile profile, double error, double releaseScale = 1)

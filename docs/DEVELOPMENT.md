@@ -17,20 +17,22 @@
 
 1.3.0 发布构建零警告/错误并校验 233 个游戏/Unity 引用；托管验证通过 21 项索引、12 项归档、16 项回放分析、19 项状态/下载检查及 39 项更新/重启协议断言。内嵌包安装/校验/卸载、功能说明升级与手改保留、运行时复用/回滚、正常退出/单次重启均通过。安装器 SHA-256：`9562b8c0044ffe58ab31a42215891df247fa59ed44db27e75517d7bacd7be39f`。
 
+1.3.1 修正回放图表：直方图按数值边界定位并按桶宽绘制密度，CVT 仅显示有样本的时间桶并按谱面时间定位。托管回放分析 22 项通过；隔离游戏在 1280×720 与 1920×1080 各通过 161 项，覆盖非等宽分桶、溢出桶和稀疏时间轴。
+
 replay-action 两张真实预制体捕获中的 123456 / 98.5% 为合成详情数据。完整会话的暂停/继续仅经源码审查，reset/seek 断言不代表该流程通过；未完成整谱重演、真实排行榜写入或服务端接受测试，也没有真实双账号联机或物理多屏 DPI 验证。
 
 ## 手动发布补丁版
 
 仅修改自己的管理面板说明时，编辑游戏目录下 `BetterMalodyV/docs/FEATURES.md` 并按 F5 即可，无需打包。向其他用户发布则编辑仓库 `docs/FEATURES.md`；升级仍会保留他们手动修改过的安装副本。
 
-以下以从 1.3.0 发布下一个补丁版 1.3.1 为例，在仓库根目录执行；先将 `Directory.Build.props` 的 Version、`src/BetterMalodyV.Plugin/Plugin.cs` 的 BepInPlugin 版本都改为 `1.3.1`，并把 README.md 的安装器文件名改为 `BetterMalodyV-Setup-1.3.1.exe`。
+以下以从 1.3.1 发布下一个补丁版 1.3.2 为例，在仓库根目录执行；先将 `Directory.Build.props` 的 Version、`src/BetterMalodyV.Plugin/Plugin.cs` 的 BepInPlugin 版本都改为 `1.3.2`，并把 README.md 的安装器文件名改为 `BetterMalodyV-Setup-1.3.2.exe`。
 
 ```powershell
 pwsh -NoProfile -File scripts/build-release.ps1
 pwsh -NoProfile -File scripts/test-package.ps1
 git diff -- docs/FEATURES.md Directory.Build.props src/BetterMalodyV.Plugin/Plugin.cs README.md
 git add -- docs/FEATURES.md Directory.Build.props src/BetterMalodyV.Plugin/Plugin.cs README.md
-git commit -m "Release 1.3.1"
+git commit -m "Release 1.3.2"
 git push origin main
 pwsh -NoProfile -File scripts/publish-github-release.ps1 -SkipBuild
 ```

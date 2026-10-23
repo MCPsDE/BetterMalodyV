@@ -1,5 +1,5 @@
 param([string]$GameRoot = 'E:\Program Files (x86)\Steam\steamapps\common\MalodyV', [switch]$ReuseHost,
-    [int]$Width = 1440,[int]$Height = 900,[switch]$UseInstalledMetadata,[switch]$RoomVisual,[switch]$UpdateVisual,[switch]$ReplayVisual)
+    [int]$Width = 1440,[int]$Height = 900,[int]$TimeoutSeconds = 120,[switch]$UseInstalledMetadata,[switch]$RoomVisual,[switch]$UpdateVisual,[switch]$ReplayVisual)
 $ErrorActionPreference = 'Stop'
 $repo = [IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..'))
 $hostRoot = Join-Path $repo 'artifacts\native-test'
@@ -38,10 +38,10 @@ try {
     $process = Start-Process -FilePath (Join-Path $hostRoot 'Malody V.exe') -WorkingDirectory $hostRoot -WindowStyle Hidden -ArgumentList @('-batchmode','-screen-width',$Width,'-screen-height',$Height,'-logFile',('"'+(Join-Path $hostRoot 'unity.log')+'"')) -PassThru
     $process.Id | Set-Content (Join-Path $hostRoot 'test-pid.txt')
     Write-Output "Isolated test started: PID $($process.Id), $hostRoot"
-    if (!$process.WaitForExit(60000)) {
+    if (!$process.WaitForExit($TimeoutSeconds * 1000)) {
         $owned = Get-CimInstance Win32_Process -Filter "ProcessId=$($process.Id)"
         if ($owned.ExecutablePath -eq (Join-Path $hostRoot 'Malody V.exe')) { Stop-Process -Id $process.Id -Force }
-        throw 'Isolated runtime test did not complete within 60 seconds. Its owned test process was stopped.'
+        throw "Isolated runtime test did not complete within $TimeoutSeconds seconds. Its owned test process was stopped."
     }
     $result = Get-Content -LiteralPath (Join-Path $hostRoot 'result.json') -Raw | ConvertFrom-Json
     if (!$result.passed) { throw $result.error }
