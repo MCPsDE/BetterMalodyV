@@ -34,20 +34,42 @@ Console.WriteLine($"PASS: {assertions} status/update assertions (real download/h
 foreach(var scenario in new[]{"good","bad-hash"})
 {
     var started=false;using var client=new HttpClient(new Fixture(scenario));
+    var reports=new List<GameUpdateProgress>();
     var result=await UpdateService.CheckAndStartAsync(Path.GetTempPath(),testClient:client,testLauncher:start=>
     {
         started=true;
         Check(start.ArgumentList.Count==4 && start.ArgumentList[0]=="--update-game","Game update selects restart protocol");
         Check(start.ArgumentList[3]=="12345","Game update preserves original game PID");
         return Process.GetCurrentProcess();
-    },gameProcessId:12345);
+    },gameProcessId:12345,gameProgress:new CaptureProgress(reports));
     Check(started==(scenario=="good"),"Game restart installer only runs after checksum verification");
     Check(result.State==(scenario=="good"?UpdateState.Started:UpdateState.Failed),"Game update result");
+    Check(reports.Any(p=>p.Stage==GameUpdateStage.Downloading && p.DownloadedBytes==Fixture.Payload.Length && p.Fraction==1),"Real streamed download reports exact received bytes and completion");
+    Check(reports.FindIndex(p=>p.Stage==GameUpdateStage.Verifying)>reports.FindLastIndex(p=>p.Stage==GameUpdateStage.Downloading),"Checksum stage follows download completion");
+    Check(reports.Any(p=>p.Stage==GameUpdateStage.Ready)==(scenario=="good"),"Failed checksum never reports restart readiness");
 }
+Check(new GameUpdateProgress(GameUpdateStage.Downloading,"1.1.2",100).Fraction is null,"Unknown download length never produces a false percentage");
+Check(!new GameUpdateProgress(GameUpdateStage.Checking).Visible && !new GameUpdateProgress(GameUpdateStage.Failed).Visible,"Quiet checks do not show an unsolicited popup");
+var progressRoot=Path.Combine(Path.GetTempPath(),"BetterMalodyV-progress-test-"+Guid.NewGuid().ToString("N"));
+try
+{
+    var expected=new GameUpdateProgress(GameUpdateStage.Downloading,"1.1.2",35,100);
+    GameUpdateProtocol.WriteProgress(progressRoot,12345,expected);
+    Check(GameUpdateProtocol.ReadProgress(progressRoot,12345)==expected,"Worker progress survives file transport to the game");
+    Check(GameUpdateProtocol.ReadProgress(progressRoot,12346) is null,"Progress is scoped to the game process");
+    GameUpdateProtocol.WriteProgress(progressRoot,12345,new(GameUpdateStage.Ready,"1.1.2"));
+    Check(GameUpdateProtocol.ReadProgress(progressRoot,12345)?.Stage==GameUpdateStage.Ready,"Atomic progress replacement exposes the latest stage");
+}
+finally {Directory.Delete(progressRoot,true);}
 Check(GameUpdateProtocol.IsExpectedGame("E:/TestGame","E:/TestGame/Malody V.exe"),"Expected game executable accepted");
 Check(!GameUpdateProtocol.IsExpectedGame("E:/TestGame","E:/Other/Malody V.exe"),"Different installation is never closed");
 Check(GameUpdateProtocol.GateName("E:/TestGame/")==GameUpdateProtocol.GateName("e:/testgame"),"One update gate per normalized installation");
 Console.WriteLine($"PASS: {assertions} total update/protocol assertions including game-start checks and restart gating.");
+
+sealed class CaptureProgress(List<GameUpdateProgress> values):IProgress<GameUpdateProgress>
+{
+    public void Report(GameUpdateProgress value)=>values.Add(value);
+}
 
 sealed class Fixture(string scenario) : HttpMessageHandler
 {

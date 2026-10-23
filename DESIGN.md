@@ -164,7 +164,7 @@ components:
 
 BetterMalodyV deliberately reuses the user's established MalodyVThemeLoader world: quiet neutral layers, restrained blue actions and familiar native controls for Chinese-speaking Malody V players. The manager defaults to dark and saves a light or dark preference; the installer always uses light. The supplied M artwork and the shared multicolor sponsor control carry the identity.
 
-This is a record of the shipped WinForms implementation, not a new identity proposal. The manager's reading strategy and the installer's operation strategy live in `.impeccable/briefs/desktop.md`. Unity search controls retain their separate native game context.
+This is a record of the shipped WinForms implementation, not a new identity proposal. The manager's reading strategy and the installer's operation strategy live in `.impeccable/briefs/desktop.md`. Unity search and update controls retain their separate native game context.
 
 **Key Characteristics:**
 
@@ -245,6 +245,12 @@ The manager stores appearance in `%LocalAppData%\BetterMalodyV\appearance.json`;
 Stable, Beta and Alpha are equal-width, equal-height native toggles aligned inside the search input’s right edge; All remains a separate reset action. The fills are #CCCCCC at 15% selected and 7% unselected opacity. `NativeUi` draws a two-stroke checkmark sprite that appears only when selected. Original input font/size/ink and a reserved left textViewport are retained. Width uses the longest actual status label, and commands remain complete on one line. An active-panel controller supplements the native Show hook.
 
 The room update action uses #CCCCCC at 12% opacity, sits beside the selected song and reserves title/artist width. It retains the artist label's native font, size and ink, with English fallback when the font lacks the tested CJK character. Current evidence uses actual shipped SearchAdv and SceneRoom in an isolated host at 1280×720 and 1920×1080, with simulated room responses and downloads; it does not establish a real two-account multiplayer session or physical DPI.
+
+### Native game update dialog
+
+Reuse the shipped `PanelDialog` through `FrontLayerManager`, retaining the game's title/body fonts, blur, button, keyboard shortcuts and close behavior. Use Chinese when the native font supports it and English fallback otherwise. A quiet translucent track below the description uses the native text ink for its fill. Known-length downloads show transferred/total MB and percentage; unknown-length downloads show transferred MB with an indeterminate bar. Verification, ready and failure have explicit text, and “隐藏” / “Hide” dismisses the notice while work continues.
+
+Defer the notice and restart during active play, editing or unsafe room states. Start the 3-second restart countdown only after the ready notice is visibly presented; failed creation leaves no partial dialog or restart permission. The ten `update-{download,verifying,ready,failed,unknown}-{1280x720,1920x1080}.png` captures use the actual shipped prefab with simulated next-version/progress data. No manager window or new desktop palette is introduced.
 
 ### Artwork
 

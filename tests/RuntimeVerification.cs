@@ -36,6 +36,10 @@ public sealed class RuntimeVerification : MonoBehaviour
     private static bool blockScans;
     private float roomCaptureAt=float.PositiveInfinity;
     private UnityEngine.UI.Button? roomUpdateButton;
+    private float updateCaptureAt=float.PositiveInfinity;
+    private int updateCapture;
+    private GameUpdateDialog? updateDialog;
+    private readonly string[] updateStates={"download","verifying","ready","failed","unknown"};
     private static int Width => int.TryParse(Environment.GetEnvironmentVariable("BETTER_MALODYV_TEST_WIDTH"),out var width) ? width : 1440;
     private static int Height => int.TryParse(Environment.GetEnvironmentVariable("BETTER_MALODYV_TEST_HEIGHT"),out var height) ? height : 900;
     public static void Install(Plugin plugin, Harmony harmony)
@@ -78,6 +82,7 @@ public sealed class RuntimeVerification : MonoBehaviour
                     try { BeginRoomCapture();roomCaptureAt=Time.unscaledTime+1.2f; }
                     catch(Exception ex){WriteResult(ex);exitAt=Time.unscaledTime+.2f;}
                 }
+                else if(Environment.GetEnvironmentVariable("BETTER_MALODYV_TEST_UPDATE_VISUAL")=="1")BeginUpdateCapture();
                 else exitAt = Time.unscaledTime+.2f;
             }
             if(Time.unscaledTime>=roomCaptureAt && captureCamera is not null)
@@ -94,7 +99,13 @@ public sealed class RuntimeVerification : MonoBehaviour
                     WriteResult();
                 }
                 catch(Exception ex){WriteResult(ex);}
-                exitAt=Time.unscaledTime+.2f;
+                if(Environment.GetEnvironmentVariable("BETTER_MALODYV_TEST_UPDATE_VISUAL")=="1")BeginUpdateCapture();
+                else exitAt=Time.unscaledTime+.2f;
+            }
+            if(Time.unscaledTime>=updateCaptureAt && captureCamera is not null)
+            {
+                try {CaptureUpdate();}
+                catch(Exception ex){WriteResult(ex);updateCaptureAt=float.PositiveInfinity;exitAt=Time.unscaledTime+.2f;}
             }
             if (Time.unscaledTime >= exitAt) Application.Quit();
             return;
@@ -112,6 +123,76 @@ public sealed class RuntimeVerification : MonoBehaviour
         }
     }
     private void Check(bool condition,string label) { if (!condition) throw new Exception(label); checks.Add(label); }
+    private void BeginUpdateCapture()
+    {
+        try
+        {
+            realPanel!.GetComponentInParent<Canvas>().gameObject.SetActive(false);
+            Check(GameUpdateController.CanRestart(),"Actual menu permits update presentation and restart");
+            foreach(var name in new[]{"ScenePlay.UpdateFixture","SceneEdit.UpdateFixture"})
+            {
+                var scene=SceneManager.CreateScene(name,default(CreateSceneParameters));var marker=new GameObject("Update safety fixture");SceneManager.MoveGameObjectToScene(marker,scene);
+                Check(!GameUpdateController.CanRestart(),"Actual "+name+" defers update presentation and restart");
+                marker.SetActive(false);UnityEngine.Object.Destroy(marker);
+            }
+            updateDialog=new();
+            try
+            {
+                GameUpdateDialog.TestCreateFailure=()=>throw new IOException("Simulated native dialog setup failure");
+                try {updateDialog.Render(new(GameUpdateStage.Ready,"1.1.2"),true,3);}
+                catch(IOException) { }
+                Check(!updateDialog.TestPanel && !updateDialog.ReadyPresented,"Failed native popup creation cannot enable automatic restart");
+            }
+            finally {GameUpdateDialog.TestCreateFailure=null;}
+            updateDialog.Render(new(GameUpdateStage.Checking),true);
+            Check(!updateDialog.TestPanel,"No game popup for a quiet update check");
+            ApplyUpdateState();updateCaptureAt=Time.unscaledTime+1.2f;
+        }
+        catch(Exception ex){WriteResult(ex);exitAt=Time.unscaledTime+.2f;}
+    }
+    private void ApplyUpdateState()
+    {
+        var value=updateCapture switch
+        {
+            0=>new GameUpdateProgress(GameUpdateStage.Downloading,"1.1.2",70*1048576,200*1048576),
+            1=>new GameUpdateProgress(GameUpdateStage.Verifying,"1.1.2"),
+            2=>new GameUpdateProgress(GameUpdateStage.Ready,"1.1.2"),
+            3=>new GameUpdateProgress(GameUpdateStage.Failed,"1.1.2"),
+            _=>new GameUpdateProgress(GameUpdateStage.Downloading,"1.1.2",70*1048576)
+        };
+        updateDialog!.Render(value,true,3);
+        var panel=updateDialog.TestPanel!;Check(panel,"Uses actual native update dialog: "+updateStates[updateCapture]);
+        var canvas=panel.GetComponentInParent<Canvas>();canvas.renderMode=RenderMode.ScreenSpaceCamera;canvas.worldCamera=captureCamera;canvas.planeDistance=1;
+    }
+    private void CaptureUpdate()
+    {
+        var panel=updateDialog!.TestPanel!;
+        var rect=panel.textOK.transform.parent.GetComponent<RectTransform>();
+        Check(panel.textOK.GetPreferredValues(panel.textOK.text).x+24<=rect.rect.width,"Update dialog command fits completely: "+updateStates[updateCapture]);
+        if(updateCapture==0)
+        {
+            Check(panel.desc.text.Contains("35") && Math.Abs(updateDialog.TestFill!.anchorMax.x-.35f)<.001,"Actual download percentage drives text and progress bar");
+            Check(panel.desc.GetPreferredValues(panel.desc.text).y<=panel.desc.rectTransform.rect.height,"Complete download copy fits original native font");
+        }
+        if(updateCapture==2)Check(updateDialog.TestFill!.anchorMax.x==1 && panel.desc.text.Contains("3"),"Ready dialog shows full progress and restart countdown");
+        if(updateCapture==3)Check(!updateDialog.TestFill!.gameObject.activeSelf,"Failed update hides progress and permits continuing the game");
+        if(updateCapture==4)Check(!panel.desc.text.Contains('%'),"Unknown length shows received bytes without a fabricated percentage");
+        Canvas.ForceUpdateCanvases();captureCamera!.Render();RenderTexture.active=captureCamera.targetTexture;
+        var bitmap=new Texture2D(Width,Height,TextureFormat.RGB24,false);bitmap.ReadPixels(new Rect(0,0,Width,Height),0,0);bitmap.Apply();
+        File.WriteAllBytes(Path.Combine(Root,"game-update-"+updateStates[updateCapture]+".png"),ImageConversion.EncodeToPNG(bitmap));RenderTexture.active=null;
+        updateCapture++;
+        if(updateCapture<updateStates.Length){ApplyUpdateState();updateCaptureAt=Time.unscaledTime+.4f;return;}
+        updateDialog.Close();updateDialog.Render(new(GameUpdateStage.Downloading,"1.1.2",50,100),true);
+        Check(!updateDialog.TestPanel,"Hiding a download does not repeatedly reopen the popup");
+        updateDialog.Render(new(GameUpdateStage.Ready,"1.1.2"),false);
+        Check(!updateDialog.TestPanel && !updateDialog.ReadyPresented,"Play or editing defers the update popup and readiness notice");
+        updateDialog.Render(new(GameUpdateStage.Ready,"1.1.2"),true,3);
+        Check(updateDialog.TestPanel,"Ready popup appears when safely back in a menu");
+        foreach(var group in updateDialog.TestPanel!.GetComponentsInParent<CanvasGroup>())group.alpha=1;
+        updateDialog.Render(new(GameUpdateStage.Ready,"1.1.2"),true,3);
+        Check(updateDialog.ReadyPresented,"Visible ready notice enables restart countdown");
+        updateDialog.Close();WriteResult();updateCaptureAt=float.PositiveInfinity;exitAt=Time.unscaledTime+.2f;
+    }
     private void BeginRoomCapture()
     {
         realPanel!.GetComponentInParent<Canvas>().gameObject.SetActive(false);

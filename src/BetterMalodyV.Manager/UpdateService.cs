@@ -19,7 +19,8 @@ internal static class UpdateService
         CancellationToken cancellationToken = default,
         HttpClient? testClient = null,
         Func<System.Diagnostics.ProcessStartInfo, System.Diagnostics.Process?>? testLauncher = null,
-        int? gameProcessId = null)
+        int? gameProcessId = null,
+        IProgress<GameUpdateProgress>? gameProgress = null)
     {
         if (string.Equals(
                 Environment.GetEnvironmentVariable("BETTER_MALODYV_DISABLE_UPDATES"),
@@ -72,6 +73,8 @@ internal static class UpdateService
                 return UpdateResult.None;
             }
 
+            gameProgress?.Report(new(GameUpdateStage.Downloading,latestVersion.ToString(3)));
+
             var assets = root.TryGetProperty("assets", out var assetsProperty)
                 ? assetsProperty.EnumerateArray().ToList()
                 : new List<JsonElement>();
@@ -109,7 +112,8 @@ internal static class UpdateService
                     installerAsset.GetProperty("browser_download_url").GetString()
                         ?? throw new InvalidDataException("安装器下载地址为空。"),
                     installerPath,
-                    cancellationToken);
+                    cancellationToken,
+                    (downloaded,total)=>gameProgress?.Report(new(GameUpdateStage.Downloading,latestVersion.ToString(3),downloaded,total)));
                 await DownloadAsync(
                     client,
                     checksumAsset.GetProperty("browser_download_url").GetString()
@@ -117,6 +121,7 @@ internal static class UpdateService
                     checksumPath,
                     cancellationToken);
 
+                gameProgress?.Report(new(GameUpdateStage.Verifying,latestVersion.ToString(3)));
                 var expected = FindExpectedHash(checksumPath, installerName);
                 var actual = ComputeSha256(installerPath);
                 if (!string.Equals(expected, actual, StringComparison.OrdinalIgnoreCase))
@@ -138,6 +143,7 @@ internal static class UpdateService
                 if(gameProcessId.HasValue)start.ArgumentList.Add(gameProcessId.Value.ToString());
                 _ = (testLauncher is null ? System.Diagnostics.Process.Start(start) : testLauncher(start))
                     ?? throw new InvalidOperationException("无法启动更新安装器。");
+                gameProgress?.Report(new(GameUpdateStage.Ready,latestVersion.ToString(3)));
                 return UpdateResult.Started(latestVersion);
             }
             catch
@@ -167,7 +173,8 @@ internal static class UpdateService
         HttpClient client,
         string url,
         string destination,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        Action<long,long?>? downloadProgress = null)
     {
         using var response = await client.GetAsync(
             url,
@@ -182,7 +189,18 @@ internal static class UpdateService
             FileShare.None,
             128 * 1024,
             useAsync: true);
-        await source.CopyToAsync(destinationStream, cancellationToken);
+        var total=response.Content.Headers.ContentLength;
+        var buffer=new byte[128*1024];long downloaded=0;
+        var reportAt=Environment.TickCount64;
+        downloadProgress?.Invoke(0,total);
+        int count;
+        while((count=await source.ReadAsync(buffer,cancellationToken))>0)
+        {
+            await destinationStream.WriteAsync(buffer.AsMemory(0,count),cancellationToken);downloaded+=count;
+            if(Environment.TickCount64>=reportAt)
+            {downloadProgress?.Invoke(downloaded,total);reportAt=Environment.TickCount64+100;}
+        }
+        downloadProgress?.Invoke(downloaded,total);
     }
 
     private static string FindExpectedHash(string path, string fileName)

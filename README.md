@@ -5,7 +5,7 @@ Windows x64 / BepInEx 6 IL2CPP 版 Malody V 优化插件。
 - 状态筛选：大厅和联机搜索按 Stable、Beta、Alpha（含 Promotion）筛选歌曲及谱面。
 - 房主更新：选中的官方谱面有新版时，在房间内一键下载更新。
 - 分享同步：房员接收分享后自动替换本地不一致的版本。
-- 自动更新：游戏启动及每 30 分钟检查新版，校验后等待本局结束、安装并自动重启。
+- 自动更新：游戏启动及每 30 分钟检查新版，游戏内弹窗显示下载进度，校验后等待本局结束、安装并自动重启。
 
 [下载安装器](https://github.com/MCPsDE/BetterMalodyV/releases/latest)，退出游戏后运行 `BetterMalodyV-Setup-1.1.1.exe` 安装；后续升级无需打开管理面板。
 
