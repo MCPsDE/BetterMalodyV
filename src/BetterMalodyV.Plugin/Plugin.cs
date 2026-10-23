@@ -8,7 +8,7 @@ using Malody.Scene.Panel;
 
 namespace BetterMalodyV.Plugin;
 
-[BepInPlugin("com.mcpsde.bettermalodyv", "BetterMalodyV", "1.1.1")]
+[BepInPlugin("com.mcpsde.bettermalodyv", "BetterMalodyV", "1.2.0")]
 public sealed class Plugin : BasePlugin
 {
     internal static Plugin Current = null!;
@@ -35,6 +35,8 @@ public sealed class Plugin : BasePlugin
             Adapter.StatusStore.RequestRefresh(Paths.GameRootPath);
             try { AddComponent<RoomChartController>().Initialize(harmony); }
             catch (Exception ex) { Log.LogError("Room chart updates unavailable: "+ex); }
+            try {AddComponent<ReplayRunController>().Initialize(harmony);}
+            catch(Exception ex){Log.LogError("Replay reenactment unavailable: "+ex);}
 #if !BETTER_MALODYV_VERIFY
             AddComponent<GameUpdateController>();
 #endif

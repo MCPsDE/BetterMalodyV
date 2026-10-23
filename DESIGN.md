@@ -164,7 +164,7 @@ components:
 
 BetterMalodyV deliberately reuses the user's established MalodyVThemeLoader world: quiet neutral layers, restrained blue actions and familiar native controls for Chinese-speaking Malody V players. The manager defaults to dark and saves a light or dark preference; the installer always uses light. The supplied M artwork and the shared multicolor sponsor control carry the identity.
 
-This is a record of the shipped WinForms implementation, not a new identity proposal. The manager's reading strategy and the installer's operation strategy live in `.impeccable/briefs/desktop.md`. Unity search and update controls retain their separate native game context.
+This is a record of the shipped WinForms implementation, not a new identity proposal. The manager's reading strategy and the installer's operation strategy live in `.impeccable/briefs/desktop.md`. Unity search, update and replay controls retain their separate native game context.
 
 **Key Characteristics:**
 
@@ -251,6 +251,12 @@ The room update action uses #CCCCCC at 12% opacity, sits beside the selected son
 Reuse the shipped `PanelDialog` through `FrontLayerManager`, retaining the game's title/body fonts, blur, button, keyboard shortcuts and close behavior. Use Chinese when the native font supports it and English fallback otherwise. A quiet translucent track below the description uses the native text ink for its fill. Known-length downloads show transferred/total MB and percentage; unknown-length downloads show transferred MB with an indeterminate bar. Verification, ready and failure have explicit text, and “隐藏” / “Hide” dismisses the notice while work continues.
 
 Defer the notice and restart during active play, editing or unsafe room states. Start the 3-second restart countdown only after the ready notice is visibly presented; failed creation leaves no partial dialog or restart permission. The ten `update-{download,verifying,ready,failed,unknown}-{1280x720,1920x1080}.png` captures use the actual shipped prefab with simulated next-version/progress data. No manager window or new desktop palette is introduced.
+
+### Native game replay action
+
+The local chart's `PanelScoreDetail` replay area adds “重演并上传”, with “Replay & upload” when the native font lacks the tested CJK character. Reuse `NativeUi.Action`: native font, size and ink, #CCCCCC at 12% opacity, and a complete measured single-line label. `AlignActionRow` keeps the added action at the native Cancel/Watch height and baseline, centers the row with 24-unit gaps and retains trash/share controls.
+
+The action starts normal play from an input-only copy of the owner's local replay, preserving original settings and seed; native judgement, result and submission decide the outcome. Invalid account, file, chart or unsupported settings receive the native message feedback. The two `replay-action-{1280x720,1920x1080}.png` captures use the shipped prefab with synthetic 123456 / 98.5% detail data; they establish action placement and text fit, not a completed play or server acceptance. Final isolated native runs passed 150 checks at each resolution; managed, release build, package, installer and restart checks pass. Evidence limits live in `.impeccable/review/documentation.md`.
 
 ### Artwork
 

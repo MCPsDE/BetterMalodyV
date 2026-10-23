@@ -29,9 +29,9 @@ internal static class NativeUi
         var dx=bx-ax;var dy=by-ay;var t=Mathf.Clamp01(((x-ax)*dx+(y-ay)*dy)/(dx*dx+dy*dy));
         return Mathf.Sqrt(Mathf.Pow(x-ax-t*dx,2)+Mathf.Pow(y-ay-t*dy,2));
     }
-    internal static Button Action(Transform parent,TMP_Text source,string label)
+    internal static Button Action(Transform parent,TMP_Text source,string label,string name="BetterMalodyV.RoomUpdate")
     {
-        var go=new GameObject("BetterMalodyV.RoomUpdate");go.layer=parent.gameObject.layer;
+        var go=new GameObject(name);go.layer=parent.gameObject.layer;
         var rect=go.AddComponent<RectTransform>();rect.SetParent(parent,false);
         var image=go.AddComponent<Image>();image.color=new Color(.8f,.8f,.8f,.12f);
         var button=go.AddComponent<Button>();button.targetGraphic=image;
@@ -42,5 +42,29 @@ internal static class NativeUi
         text.alignment=TextAlignmentOptions.Center;text.enableWordWrapping=false;text.raycastTarget=false;text.text=label;
         rect.sizeDelta=new Vector2(text.GetPreferredValues(label).x+32,Math.Max(40,source.fontSize+16));
         return button;
+    }
+    internal static TMP_Text? PrimaryText(Component root)=>root.GetComponentsInChildren<TextMeshProUGUI>(true)
+        .Where(t=>t.font && !string.IsNullOrEmpty(t.text))
+        .OrderByDescending(t=>t.color.a*(t.color.r*.2126f+t.color.g*.7152f+t.color.b*.0722f)).ThenByDescending(t=>t.fontSize).FirstOrDefault();
+    internal static void AlignActionRow(RectTransform parent,IReadOnlyList<RectTransform> existing,Button added)
+    {
+        var native=existing.ToArray();
+        var rect=added.GetComponent<RectTransform>();
+        var baseline=native.Average(r=>parent.InverseTransformPoint(r.TransformPoint(r.rect.center)).y);
+        rect.sizeDelta=new Vector2(rect.sizeDelta.x,native.Max(r=>r.rect.height));
+        var all=native.Append(rect).ToArray();const float gap=24;
+        var total=all.Sum(r=>r.rect.width)+gap*(all.Length-1);var x=-total/2;
+        foreach(var item in all)
+        {
+            var desired=parent.TransformPoint(new Vector3(x+item.rect.width/2,baseline,0));
+            item.position+=desired-item.TransformPoint(item.rect.center);x+=item.rect.width+gap;
+        }
+    }
+    internal static void Message(string message,bool error=true)
+    {
+        var type=typeof(Malody.Scene.SceneRoom).Assembly.GetTypes().Single(t=>t.Namespace=="Malody.Manager" && t.GetMethods().Any(m=>m.Name=="ShowMessage" && m.GetParameters().Length==4));
+        var method=type.GetMethods().Single(m=>m.Name=="ShowMessage" && m.GetParameters().Length==4 && m.GetParameters()[0].ParameterType==typeof(string));
+        var parameters=method.GetParameters();
+        method.Invoke(RoomGameApi.Singleton(type),new[]{(object)message,Enum.Parse(parameters[1].ParameterType,error?"Error":"TipNoRecord"),Enum.Parse(parameters[2].ParameterType,"Short"),(object)0});
     }
 }

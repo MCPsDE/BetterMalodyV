@@ -8,6 +8,8 @@ Reference inputs are read-only: E:\UnityProjects\Emiria, E:\Desktop\MalodyVTheme
 
 Runtime changes include local song/chart selection and, as authorized for 1.1.0, room-host chart updates plus replacing mismatched room-shared local chart files; reuse official download/selection APIs and preserve protocol, scoring, judgement, replay and authentication. Do not patch Guardian or entitlement checks.
 
+The authorized 1.2.0 replay feature may feed recorded inputs into normal play, judgement and result submission. Keep original replay files intact; do not inject recorded score values or alter score eligibility, Guardian, authentication or server validation.
+
 Use shared Windows components. Keep full action labels on one line with actual font/DPI measurement and reflow; no clipped commands, wrapping or smaller fonts as a workaround. Native numeric controls must retain themed steppers, typing, arrow keys and accessibility. Test affected screens in dark/light where applicable, minimum/normal size and relevant synthetic scales; distinguish these from physical DPI tests.
 
 docs/FEATURES.md is user-editable product content and the manager's source. Upgrade pristine copies; preserve edited installed copies. Routine UI corrections use patch releases. Keep the plugin's BepInPlugin version synchronized with Directory.Build.props.

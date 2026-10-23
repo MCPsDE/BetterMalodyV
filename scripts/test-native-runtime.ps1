@@ -1,5 +1,5 @@
 param([string]$GameRoot = 'E:\Program Files (x86)\Steam\steamapps\common\MalodyV', [switch]$ReuseHost,
-    [int]$Width = 1440,[int]$Height = 900,[switch]$UseInstalledMetadata,[switch]$RoomVisual,[switch]$UpdateVisual)
+    [int]$Width = 1440,[int]$Height = 900,[switch]$UseInstalledMetadata,[switch]$RoomVisual,[switch]$UpdateVisual,[switch]$ReplayVisual)
 $ErrorActionPreference = 'Stop'
 $repo = [IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..'))
 $hostRoot = Join-Path $repo 'artifacts\native-test'
@@ -29,6 +29,7 @@ $env:BETTER_MALODYV_TEST_HEIGHT = $Height.ToString()
 $env:BETTER_MALODYV_TEST_METADATA = if ($UseInstalledMetadata) { '1' } else { '0' }
 $env:BETTER_MALODYV_TEST_ROOM_VISUAL = if ($RoomVisual) {'1'}else{'0'}
 $env:BETTER_MALODYV_TEST_UPDATE_VISUAL = if ($UpdateVisual) {'1'}else{'0'}
+$env:BETTER_MALODYV_TEST_REPLAY_VISUAL = if ($ReplayVisual) {'1'}else{'0'}
 try {
     foreach ($name in @('result.json','search-filter-fixture.png')) {
         $previous = Join-Path $hostRoot $name
@@ -37,10 +38,10 @@ try {
     $process = Start-Process -FilePath (Join-Path $hostRoot 'Malody V.exe') -WorkingDirectory $hostRoot -WindowStyle Hidden -ArgumentList @('-batchmode','-screen-width',$Width,'-screen-height',$Height,'-logFile',('"'+(Join-Path $hostRoot 'unity.log')+'"')) -PassThru
     $process.Id | Set-Content (Join-Path $hostRoot 'test-pid.txt')
     Write-Output "Isolated test started: PID $($process.Id), $hostRoot"
-    if (!$process.WaitForExit(45000)) {
+    if (!$process.WaitForExit(60000)) {
         $owned = Get-CimInstance Win32_Process -Filter "ProcessId=$($process.Id)"
         if ($owned.ExecutablePath -eq (Join-Path $hostRoot 'Malody V.exe')) { Stop-Process -Id $process.Id -Force }
-        throw 'Isolated runtime test did not complete within 45 seconds. Its owned test process was stopped.'
+        throw 'Isolated runtime test did not complete within 60 seconds. Its owned test process was stopped.'
     }
     $result = Get-Content -LiteralPath (Join-Path $hostRoot 'result.json') -Raw | ConvertFrom-Json
     if (!$result.passed) { throw $result.error }
@@ -49,5 +50,6 @@ try {
     Copy-Item (Join-Path $hostRoot 'result.json') (Join-Path $evidence "search-native-$($Width)x$Height.json") -Force
     if($RoomVisual){Copy-Item (Join-Path $hostRoot 'room-update-fixture.png') (Join-Path $evidence "room-native-$($Width)x$Height.png") -Force}
     if($UpdateVisual){foreach($state in @('download','verifying','ready','failed','unknown')){Copy-Item (Join-Path $hostRoot "game-update-$state.png") (Join-Path $evidence "update-$state-$($Width)x$Height.png") -Force}}
+    if($ReplayVisual){Copy-Item (Join-Path $hostRoot 'replay-action.png') (Join-Path $evidence "replay-action-$($Width)x$Height.png") -Force}
     Write-Output "PASS: $($result.checks.Count) native checks using the real search prefab at $($Width)x$Height."
-} finally { Remove-Item Env:BETTER_MALODYV_TEST_OUTPUT,Env:BETTER_MALODYV_TEST_WIDTH,Env:BETTER_MALODYV_TEST_HEIGHT,Env:BETTER_MALODYV_TEST_METADATA,Env:BETTER_MALODYV_TEST_ROOM_VISUAL,Env:BETTER_MALODYV_TEST_UPDATE_VISUAL }
+} finally { Remove-Item Env:BETTER_MALODYV_TEST_OUTPUT,Env:BETTER_MALODYV_TEST_WIDTH,Env:BETTER_MALODYV_TEST_HEIGHT,Env:BETTER_MALODYV_TEST_METADATA,Env:BETTER_MALODYV_TEST_ROOM_VISUAL,Env:BETTER_MALODYV_TEST_UPDATE_VISUAL,Env:BETTER_MALODYV_TEST_REPLAY_VISUAL }

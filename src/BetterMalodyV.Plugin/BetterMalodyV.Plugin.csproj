@@ -10,6 +10,8 @@
     <Reference Include="$(GameInteropRoot)\Assembly-CSharp.dll" Private="false" />
     <Reference Include="$(GameInteropRoot)\Framework.dll" Private="false" />
     <Reference Include="$(GameInteropRoot)\Protocol.dll" Private="false" />
+    <Reference Include="$(GameInteropRoot)\Google.Protobuf.dll" Private="false" />
+    <Reference Include="$(GameInteropRoot)\Helper.dll" Private="false" />
     <Reference Include="$(GameInteropRoot)\Il2Cppmscorlib.dll" Private="false" />
     <Reference Include="$(GameInteropRoot)\Il2CppSystem.dll" Private="false" />
     <Reference Include="$(GameInteropRoot)\Il2CppSystem.Core.dll" Private="false" />
@@ -22,6 +24,7 @@
   <ItemGroup Condition="'$(RuntimeVerification)' == 'true'">
     <Compile Include="..\..\tests\RuntimeVerification.cs" Link="RuntimeVerification.cs" />
     <Compile Include="..\..\tests\RoomRuntimeTests.cs" Link="RoomRuntimeTests.cs" />
+    <Compile Include="..\..\tests\ReplayRuntimeTests.cs" Link="ReplayRuntimeTests.cs" />
     <Reference Include="$(GameInteropRoot)\UnityEngine.ScreenCaptureModule.dll" Private="false" />
     <Reference Include="$(GameInteropRoot)\UnityEngine.ImageConversionModule.dll" Private="false" />
   </ItemGroup>

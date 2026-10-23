@@ -26,6 +26,7 @@ public sealed class RuntimeVerification : MonoBehaviour
     private static string Root => Environment.GetEnvironmentVariable("BETTER_MALODYV_TEST_OUTPUT")!;
     private readonly List<string> checks = new();
     private Camera? captureCamera;
+    private Canvas? searchCanvas;
     private PanelSearchSong? realPanel;
     private long refreshMilliseconds;
     private int stressSongs;
@@ -40,6 +41,8 @@ public sealed class RuntimeVerification : MonoBehaviour
     private int updateCapture;
     private GameUpdateDialog? updateDialog;
     private readonly string[] updateStates={"download","verifying","ready","failed","unknown"};
+    private float replayCaptureAt=float.PositiveInfinity;
+    private UnityEngine.UI.Button? replayAction;
     private static int Width => int.TryParse(Environment.GetEnvironmentVariable("BETTER_MALODYV_TEST_WIDTH"),out var width) ? width : 1440;
     private static int Height => int.TryParse(Environment.GetEnvironmentVariable("BETTER_MALODYV_TEST_HEIGHT"),out var height) ? height : 900;
     public static void Install(Plugin plugin, Harmony harmony)
@@ -83,6 +86,7 @@ public sealed class RuntimeVerification : MonoBehaviour
                     catch(Exception ex){WriteResult(ex);exitAt=Time.unscaledTime+.2f;}
                 }
                 else if(Environment.GetEnvironmentVariable("BETTER_MALODYV_TEST_UPDATE_VISUAL")=="1")BeginUpdateCapture();
+                else if(Environment.GetEnvironmentVariable("BETTER_MALODYV_TEST_REPLAY_VISUAL")=="1")BeginReplayCapture();
                 else exitAt = Time.unscaledTime+.2f;
             }
             if(Time.unscaledTime>=roomCaptureAt && captureCamera is not null)
@@ -100,6 +104,7 @@ public sealed class RuntimeVerification : MonoBehaviour
                 }
                 catch(Exception ex){WriteResult(ex);}
                 if(Environment.GetEnvironmentVariable("BETTER_MALODYV_TEST_UPDATE_VISUAL")=="1")BeginUpdateCapture();
+                else if(Environment.GetEnvironmentVariable("BETTER_MALODYV_TEST_REPLAY_VISUAL")=="1")BeginReplayCapture();
                 else exitAt=Time.unscaledTime+.2f;
             }
             if(Time.unscaledTime>=updateCaptureAt && captureCamera is not null)
@@ -107,13 +112,27 @@ public sealed class RuntimeVerification : MonoBehaviour
                 try {CaptureUpdate();}
                 catch(Exception ex){WriteResult(ex);updateCaptureAt=float.PositiveInfinity;exitAt=Time.unscaledTime+.2f;}
             }
+            if(Time.unscaledTime>=replayCaptureAt && captureCamera is not null)
+            {
+                replayCaptureAt=float.PositiveInfinity;
+                try
+                {
+                    Canvas.ForceUpdateCanvases();var label=replayAction!.GetComponentInChildren<TextMeshProUGUI>();
+                    Check(label.GetPreferredValues(label.text).x+24<=replayAction.GetComponent<RectTransform>().rect.width,"Complete reenactment action fits original native font");
+                    captureCamera.Render();RenderTexture.active=captureCamera.targetTexture;
+                    var bitmap=new Texture2D(Width,Height,TextureFormat.RGB24,false);bitmap.ReadPixels(new Rect(0,0,Width,Height),0,0);bitmap.Apply();
+                    File.WriteAllBytes(Path.Combine(Root,"replay-action.png"),ImageConversion.EncodeToPNG(bitmap));RenderTexture.active=null;WriteResult();
+                }
+                catch(Exception ex){WriteResult(ex);}
+                exitAt=Time.unscaledTime+.2f;
+            }
             if (Time.unscaledTime >= exitAt) Application.Quit();
             return;
         }
         ran = true;
         try
         {
-            TestNativeData(); TestRoomBindings(); RoomRuntimeTests.Run(Check); TestControls();
+            TestNativeData(); TestRoomBindings(); RoomRuntimeTests.Run(Check); ReplayRuntimeTests.Run(Check); TestControls();
             captureAt = Time.unscaledTime+1.2f;
         }
         catch (Exception ex)
@@ -127,7 +146,7 @@ public sealed class RuntimeVerification : MonoBehaviour
     {
         try
         {
-            realPanel!.GetComponentInParent<Canvas>().gameObject.SetActive(false);
+            searchCanvas!.gameObject.SetActive(false);
             Check(GameUpdateController.CanRestart(),"Actual menu permits update presentation and restart");
             foreach(var name in new[]{"ScenePlay.UpdateFixture","SceneEdit.UpdateFixture"})
             {
@@ -191,11 +210,30 @@ public sealed class RuntimeVerification : MonoBehaviour
         foreach(var group in updateDialog.TestPanel!.GetComponentsInParent<CanvasGroup>())group.alpha=1;
         updateDialog.Render(new(GameUpdateStage.Ready,"1.1.2"),true,3);
         Check(updateDialog.ReadyPresented,"Visible ready notice enables restart countdown");
-        updateDialog.Close();WriteResult();updateCaptureAt=float.PositiveInfinity;exitAt=Time.unscaledTime+.2f;
+        updateDialog.Close();WriteResult();updateCaptureAt=float.PositiveInfinity;
+        if(Environment.GetEnvironmentVariable("BETTER_MALODYV_TEST_REPLAY_VISUAL")=="1")BeginReplayCapture();else exitAt=Time.unscaledTime+.2f;
+    }
+    private void BeginReplayCapture()
+    {
+        try
+        {
+            searchCanvas!.gameObject.SetActive(false);
+            var front=UnityEngine.Object.FindObjectOfType<FrontLayerManager>();
+            var panel=front!.Instantiate(FrontLayerManager.PrefabType.ScoreDetail,false).GetComponent<PanelScoreDetail>();
+            panel.Show(new ScoreRecord{Score=123456,Combo=200,Acc=98.5f,Level=2,Rank=1,Best=190,Cool=5,Good=3,Miss=2,Time=1782000000});
+            var owner=ReplayRunController.Current!;owner.Api.SetLocalPath(panel,Path.Combine(Root,"own-replay-fixture.mrv"));
+            panel.areaRep.SetActive(true);panel.btnCancel.SetActive(false);panel.iconShare.SetActive(true);
+            File.WriteAllText(Path.Combine(Root,"replay-ui-structure.json"),JsonSerializer.Serialize(panel.GetComponentsInChildren<RectTransform>(true).Select(r=>new{name=r.name,parent=r.parent?.name,width=r.rect.width,height=r.rect.height,x=r.anchoredPosition.x,y=r.anchoredPosition.y,legacy=r.GetComponent<Text>()?.text,tmp=r.GetComponent<TextMeshProUGUI>()?.text}),new JsonSerializerOptions{WriteIndented=true}));
+            replayAction=owner.Attach(panel);Check(replayAction,"Local chart score details expose reenactment action beside native replay controls");
+            Check(owner.Attach(panel)==replayAction,"Reopening discovery does not duplicate replay action");
+            var canvas=panel.GetComponentInParent<Canvas>();canvas.renderMode=RenderMode.ScreenSpaceCamera;canvas.worldCamera=captureCamera;canvas.planeDistance=1;
+            replayCaptureAt=Time.unscaledTime+1.2f;
+        }
+        catch(Exception ex){WriteResult(ex);exitAt=Time.unscaledTime+.2f;}
     }
     private void BeginRoomCapture()
     {
-        realPanel!.GetComponentInParent<Canvas>().gameObject.SetActive(false);
+        searchCanvas!.gameObject.SetActive(false);
         RoomChartController.Current!.enabled=false;
         SceneManager.LoadScene("SceneRoom",LoadSceneMode.Additive);
     }
@@ -373,6 +411,7 @@ public sealed class RuntimeVerification : MonoBehaviour
         captureCamera.clearFlags = CameraClearFlags.SolidColor; captureCamera.backgroundColor = new Color(.04f,.05f,.07f,1);
         UnityEngine.Object.DontDestroyOnLoad(captureCamera.gameObject);
         var canvas = new GameObject("VerificationCanvas").AddComponent<Canvas>();
+        searchCanvas=canvas;
         canvas.renderMode = RenderMode.ScreenSpaceCamera; canvas.worldCamera = captureCamera; canvas.planeDistance = 1; canvas.sortingOrder = 32767;
         UnityEngine.Object.DontDestroyOnLoad(canvas.gameObject);
         canvas.gameObject.AddComponent<GraphicRaycaster>();
