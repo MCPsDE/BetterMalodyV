@@ -29,6 +29,8 @@ internal static class ReplayRuntimeTests
     {
         void check(bool condition,string label){File.WriteAllText(Path.Combine(BepInEx.Paths.GameRootPath,"replay-test-step.txt"),label);verify(condition,label);}
         var owner=ReplayRunController.Current??throw new Exception("Replay input feature did not bind");var api=owner.Api;
+        var parser=ReplayAnalysisGameApi.ResolveParserType();
+        check(parser.GetMethods(BindingFlags.Public|BindingFlags.NonPublic|BindingFlags.Static).Any(m=>m.Name=="CreateFromFilePath"),"Native analysis uses the game's isolated chart parser");
         var framework=typeof(PlayModeType).Assembly;
         var online=framework.GetTypes().Single(t=>t.Namespace=="Malody.Network" && t.GetMethods().Any(m=>m.Name=="get_Self"));
         var self=ReplayGameApi.Call(RoomGameApi.Singleton(online),"get_Self")!;
@@ -72,6 +74,24 @@ internal static class ReplayRuntimeTests
             var file=Path.Combine(BepInEx.Paths.GameRootPath,"own-replay-fixture.mrv");
             File.WriteAllBytes(file,Google.Protobuf.MessageExtensions.ToByteArray(replay.Cast<Google.Protobuf.IMessage>()).ToArray());
             check(api.Read(file).UserId==888,"Actual native replay parser reads the selected local file");
+            var chartFile=Path.Combine(BepInEx.Paths.GameRootPath,"analysis-chart-fixture.mc");
+            File.WriteAllText(chartFile,"{\"meta\":{\"mode\":0,\"version\":\"Lv.5\",\"song\":{\"title\":\"Analysis fixture\",\"artist\":\"Local\"},\"mode_ext\":{\"column\":4}},\"time\":[{\"beat\":[0,0,1],\"bpm\":120}],\"note\":[{\"beat\":[4,0,1],\"column\":0},{\"beat\":[5,0,1],\"endbeat\":[6,0,1],\"column\":1}]}");
+            meta.Path=chartFile;meta.Version="Lv.5";meta.Index=0;
+            var analyzed=owner.AnalysisApi.Analyze(file);
+            check(analyzed.Analysis.ChartNoteCount==2 && analyzed.Analysis.Tracks.Count==4,$"Analysis parses a temporary chart copy and reads track note data: notes={analyzed.Analysis.ChartNoteCount}, tracks={analyzed.Analysis.Tracks.Count}");
+            check(api.ChartHash(chart)==replay.ChartHash,"Analysis leaves the game's cached chart metadata intact");
+            var flipped=ReplayFile.Parser.ParseFrom(Google.Protobuf.MessageExtensions.ToByteArray(replay.Cast<Google.Protobuf.IMessage>()).ToArray());
+            flipped.Score.Mod=(uint)ModMask.Flip;
+            var flippedFile=Path.Combine(BepInEx.Paths.GameRootPath,"flipped-analysis-fixture.mrv");
+            File.WriteAllBytes(flippedFile,Google.Protobuf.MessageExtensions.ToByteArray(flipped.Cast<Google.Protobuf.IMessage>()).ToArray());
+            var flippedResult=owner.AnalysisApi.Analyze(flippedFile);
+            check(flippedResult.Analysis.Tracks[2].NoteCount==1 && flippedResult.Analysis.Tracks[3].NoteCount==1,"Flip mod mirrors chart lanes before matching replay inputs");
+            var luck=ReplayFile.Parser.ParseFrom(Google.Protobuf.MessageExtensions.ToByteArray(replay.Cast<Google.Protobuf.IMessage>()).ToArray());
+            luck.Score.Mod=(uint)ModMask.Luck;
+            var luckFile=Path.Combine(BepInEx.Paths.GameRootPath,"random-analysis-fixture.mrv");
+            File.WriteAllBytes(luckFile,Google.Protobuf.MessageExtensions.ToByteArray(luck.Cast<Google.Protobuf.IMessage>()).ToArray());
+            var luckResult=owner.AnalysisApi.Analyze(luckFile);
+            check(luckResult.Analysis.Profiles.Count==0 && luckResult.Analysis.Warnings.Any(w=>w.Contains("Luck")),"Unknown random lane permutations suppress misleading timing estimates");
             var previous=api.InUse;var guard=new Harmony("com.mcpsde.bettermalodyv.verify.replay-navigation");
             try
             {

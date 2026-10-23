@@ -8,6 +8,8 @@ using BetterMalodyV.Shared;
 Environment.SetEnvironmentVariable("BETTER_MALODYV_DISABLE_UPDATES",null);
 StatusIndexTests.Run();
 SharedChartTests.Run();
+var replayAnalysisAssertions = ReplayAnalysisTests.Run();
+Console.WriteLine($"PASS: {replayAnalysisAssertions} replay analysis assertions (offset, tracks, presses, judgement profiles).");
 var assertions = 0;
 void Check(bool condition,string label) { if (!condition) throw new Exception(label); assertions++; }
 Check(StatusSelection.Matches(StatusMask.All,10),"All includes unknown");

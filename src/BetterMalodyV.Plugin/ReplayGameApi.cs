@@ -111,7 +111,7 @@ internal sealed class ReplayGameApi
     internal void Attach(object helper,object control)=>helperAttach.Invoke(helper,new[]{control});
     internal void Seek(object helper,int time)=>helperSeek.Invoke(helper,new object[]{time});
     internal void Tick(object helper,int time)=>helperTick.Invoke(helper,new object[]{time});
-    private object? ResolveChart(string hash)
+    internal object? ResolveChart(string hash)
     {
 #if BETTER_MALODYV_VERIFY
         if(TestChart is not null)return TestChart(hash);

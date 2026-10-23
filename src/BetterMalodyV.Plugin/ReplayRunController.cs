@@ -17,6 +17,7 @@ public sealed class ReplayRunController : MonoBehaviour
     public ReplayRunController(IntPtr pointer):base(pointer) { }
     internal static ReplayRunController? Current;
     internal ReplayGameApi Api=null!;
+    internal ReplayAnalysisGameApi AnalysisApi=null!;
     private Run? run;
     private float nextScan;
     private float nextAccountCheck;
@@ -37,6 +38,7 @@ public sealed class ReplayRunController : MonoBehaviour
     internal void Initialize(Harmony harmony)
     {
         Api=new();
+        AnalysisApi=new(Api);
         var installed=new List<MethodInfo>();
         HarmonyMethod Hook(string name)=>new(typeof(ReplayRunController),name);
         void Patch(MethodInfo method,string name,bool postfix=false)
@@ -80,22 +82,47 @@ public sealed class ReplayRunController : MonoBehaviour
         const string name="BetterMalodyV.ReplayRun";
         var path=Api.LocalPath(panel);
         if(string.IsNullOrEmpty(path) || !panel.areaRep.activeSelf)return null;
-        var existing=panel.areaRep.transform.Find(name);if(existing)return existing.GetComponent<Button>();
+        var existing=panel.areaRep.transform.Find(name);
+        var analysisExisting=panel.areaRep.transform.Find("BetterMalodyV.ReplayAnalysis");
         var source=NativeUi.PrimaryText(panel.areaRep.transform);
         if(!source)return null;
-        var native=panel.areaRep.GetComponentsInChildren<RectTransform>().Where(r=>r.parent==panel.areaRep.transform && r.rect.width>150 && r.rect.height>32 && r.GetComponentInChildren<TextMeshProUGUI>()).ToArray();
+        var native=panel.areaRep.GetComponentsInChildren<RectTransform>().Where(r=>r.parent==panel.areaRep.transform
+            && r.name!=name && r.name!="BetterMalodyV.ReplayAnalysis" && r.rect.width>150 && r.rect.height>32
+            && r.GetComponentInChildren<TextMeshProUGUI>()).ToArray();
         if(native.Length==0)return null;
         var label=source!.font.HasCharacter('重',true,true)?"重演并上传":"Replay & upload";
-        var button=NativeUi.Action(panel.areaRep.transform,source!,label,name);
-        var rect=button.GetComponent<RectTransform>();
-        rect.anchorMin=rect.anchorMax=rect.pivot=new Vector2(.5f,.5f);
-        NativeUi.AlignActionRow(panel.areaRep.GetComponent<RectTransform>(),native,button);
-        button.onClick.AddListener((UnityAction)(()=>
+        var analysisLabel=source.font.HasCharacter('回',true,true)?"回放分析":"Replay analysis";
+        var button=existing ? existing!.GetComponent<Button>() : NativeUi.Action(panel.areaRep.transform,source,label,name);
+        var analysisButton=analysisExisting ? analysisExisting!.GetComponent<Button>()
+            : NativeUi.Action(panel.areaRep.transform,source,analysisLabel,"BetterMalodyV.ReplayAnalysis");
+        foreach(var action in new[]{button,analysisButton})
         {
-            if(run is not null)return;
-            try {Launch(Api.LocalPath(panel)??throw new IOException("找不到本地回放文件。"));}
-            catch(Exception ex){Plugin.Current.LogRoom("Replay launch stopped: "+ex.GetBaseException().Message);NativeUi.Message(ex.GetBaseException().Message);}
-        }));
+            var rect=action!.GetComponent<RectTransform>();
+            rect.anchorMin=rect.anchorMax=rect.pivot=new Vector2(.5f,.5f);
+        }
+        NativeUi.AlignActionRow(panel.areaRep.GetComponent<RectTransform>(),native.Concat(new[]
+        {
+            button!.GetComponent<RectTransform>(),analysisButton!.GetComponent<RectTransform>()
+        }).ToArray());
+        if(!existing)
+            button!.onClick.AddListener((UnityAction)(()=>
+            {
+                if(run is not null)return;
+                try {Launch(Api.LocalPath(panel)??throw new IOException("找不到本地回放文件。"));}
+                catch(Exception ex){Plugin.Current.LogRoom("Replay launch stopped: "+ex.GetBaseException().Message);NativeUi.Message(ex.GetBaseException().Message);}
+            }));
+        if(!analysisExisting)
+            analysisButton!.onClick.AddListener((UnityAction)(()=>
+            {
+                if(ReplayAnalysisView.IsOpen)return;
+                try
+                {
+                    var file=Api.LocalPath(panel)??throw new IOException("找不到本地回放文件。");
+                    var session=AnalysisApi.Analyze(file);
+                    ReplayAnalysisView.Open(source,session);
+                }
+                catch(Exception ex){Plugin.Current.LogRoom("Replay analysis unavailable: "+ex.GetBaseException().Message);NativeUi.Message(ex.GetBaseException().Message);}
+            }));
         return button;
     }
     [Il2CppInterop.Runtime.Attributes.HideFromIl2Cpp]

@@ -19,6 +19,7 @@
     <Reference Include="$(GameInteropRoot)\UnityEngine.UI.dll" Private="false" />
     <Reference Include="$(GameInteropRoot)\Unity.TextMeshPro.dll" Private="false" />
     <Reference Include="$(GameInteropRoot)\UnityEngine.UIModule.dll" Private="false" />
+    <Reference Include="$(GameInteropRoot)\UnityEngine.TextRenderingModule.dll" Private="false" />
   </ItemGroup>
   <PropertyGroup Condition="'$(RuntimeVerification)' == 'true'"><DefineConstants>$(DefineConstants);BETTER_MALODYV_VERIFY</DefineConstants></PropertyGroup>
   <ItemGroup Condition="'$(RuntimeVerification)' == 'true'">

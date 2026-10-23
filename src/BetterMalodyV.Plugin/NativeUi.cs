@@ -47,12 +47,14 @@ internal static class NativeUi
         .Where(t=>t.font && !string.IsNullOrEmpty(t.text))
         .OrderByDescending(t=>t.color.a*(t.color.r*.2126f+t.color.g*.7152f+t.color.b*.0722f)).ThenByDescending(t=>t.fontSize).FirstOrDefault();
     internal static void AlignActionRow(RectTransform parent,IReadOnlyList<RectTransform> existing,Button added)
+        => AlignActionRow(parent,existing.Append(added.GetComponent<RectTransform>()).ToArray());
+    internal static void AlignActionRow(RectTransform parent,IReadOnlyList<RectTransform> items)
     {
-        var native=existing.ToArray();
-        var rect=added.GetComponent<RectTransform>();
-        var baseline=native.Average(r=>parent.InverseTransformPoint(r.TransformPoint(r.rect.center)).y);
-        rect.sizeDelta=new Vector2(rect.sizeDelta.x,native.Max(r=>r.rect.height));
-        var all=native.Append(rect).ToArray();const float gap=24;
+        var all=items.ToArray();
+        var baseline=all.Average(r=>parent.InverseTransformPoint(r.TransformPoint(r.rect.center)).y);
+        var height=all.Max(r=>r.rect.height);
+        foreach(var rect in all)rect.sizeDelta=new Vector2(rect.sizeDelta.x,height);
+        const float gap=24;
         var total=all.Sum(r=>r.rect.width)+gap*(all.Length-1);var x=-total/2;
         foreach(var item in all)
         {

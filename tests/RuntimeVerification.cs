@@ -43,6 +43,9 @@ public sealed class RuntimeVerification : MonoBehaviour
     private readonly string[] updateStates={"download","verifying","ready","failed","unknown"};
     private float replayCaptureAt=float.PositiveInfinity;
     private UnityEngine.UI.Button? replayAction;
+    private UnityEngine.UI.Button? replayAnalysisAction;
+    private float replayAnalysisCaptureAt=float.PositiveInfinity;
+    private int replayAnalysisCapture;
     private static int Width => int.TryParse(Environment.GetEnvironmentVariable("BETTER_MALODYV_TEST_WIDTH"),out var width) ? width : 1440;
     private static int Height => int.TryParse(Environment.GetEnvironmentVariable("BETTER_MALODYV_TEST_HEIGHT"),out var height) ? height : 900;
     public static void Install(Plugin plugin, Harmony harmony)
@@ -122,6 +125,43 @@ public sealed class RuntimeVerification : MonoBehaviour
                     captureCamera.Render();RenderTexture.active=captureCamera.targetTexture;
                     var bitmap=new Texture2D(Width,Height,TextureFormat.RGB24,false);bitmap.ReadPixels(new Rect(0,0,Width,Height),0,0);bitmap.Apply();
                     File.WriteAllBytes(Path.Combine(Root,"replay-action.png"),ImageConversion.EncodeToPNG(bitmap));RenderTexture.active=null;WriteResult();
+                    BeginReplayAnalysisCapture();
+                }
+                catch(Exception ex){WriteResult(ex);}
+            }
+            if(Time.unscaledTime>=replayAnalysisCaptureAt && captureCamera is not null)
+            {
+                replayAnalysisCaptureAt=float.PositiveInfinity;
+                try
+                {
+                    var page=ReplayAnalysisView.TestRoot!;
+                    var labels=page.GetComponentsInChildren<TextMeshProUGUI>(true);
+                    var buttons=page.GetComponentsInChildren<UnityEngine.UI.Button>(true);
+                    var tabs=buttons.Where(button=>button.name.StartsWith("Tab ",StringComparison.Ordinal)).ToArray();
+                    Check(tabs.Length==4,"Replay analysis provides four sections");
+                    foreach(var tab in tabs)
+                    {
+                        var text=tab.GetComponentInChildren<TextMeshProUGUI>();
+                        Check(text!.GetPreferredValues(text.text).x+20<=tab.GetComponent<RectTransform>().rect.width,"Full analysis tab label fits: "+text.text);
+                    }
+                    if(replayAnalysisCapture==0)Check(labels.Any(label=>label.text.Contains("总偏移") || label.text.Contains("Total offset")),"Overview displays signed offset statistics");
+                    if(replayAnalysisCapture==1)Check(labels.Any(label=>label.text.Contains("逐轨偏移") || label.text.Contains("Offset by track")),"Track section is rendered");
+                    if(replayAnalysisCapture==2)Check(labels.Any(label=>label.text.Contains("按压时长") || label.text.Contains("Press duration")),"Press section is rendered");
+                    if(replayAnalysisCapture==3)Check(labels.Any(label=>label.text.Contains("Baka-e")),"Judgement section includes CVT profile results");
+                    Canvas.ForceUpdateCanvases();captureCamera.Render();RenderTexture.active=captureCamera.targetTexture;
+                    var bitmap=new Texture2D(Width,Height,TextureFormat.RGB24,false);bitmap.ReadPixels(new Rect(0,0,Width,Height),0,0);bitmap.Apply();
+                    var names=new[]{"overview","tracks","presses","profiles"};
+                    File.WriteAllBytes(Path.Combine(Root,"replay-analysis-"+names[replayAnalysisCapture]+".png"),ImageConversion.EncodeToPNG(bitmap));RenderTexture.active=null;
+                    replayAnalysisCapture++;
+                    if(replayAnalysisCapture<names.Length)
+                    {
+                        tabs[replayAnalysisCapture].onClick.Invoke();
+                        replayAnalysisCaptureAt=Time.unscaledTime+.6f;
+                        return;
+                    }
+                    var back=buttons.Single(button=>button.name=="Back");back.onClick.Invoke();
+                    Check(!ReplayAnalysisView.IsOpen,"Back closes the full-screen analysis page");
+                    ReplayAnalysisView.TestCamera=null;WriteResult();
                 }
                 catch(Exception ex){WriteResult(ex);}
                 exitAt=Time.unscaledTime+.2f;
@@ -225,11 +265,34 @@ public sealed class RuntimeVerification : MonoBehaviour
             panel.areaRep.SetActive(true);panel.btnCancel.SetActive(false);panel.iconShare.SetActive(true);
             File.WriteAllText(Path.Combine(Root,"replay-ui-structure.json"),JsonSerializer.Serialize(panel.GetComponentsInChildren<RectTransform>(true).Select(r=>new{name=r.name,parent=r.parent?.name,width=r.rect.width,height=r.rect.height,x=r.anchoredPosition.x,y=r.anchoredPosition.y,legacy=r.GetComponent<Text>()?.text,tmp=r.GetComponent<TextMeshProUGUI>()?.text}),new JsonSerializerOptions{WriteIndented=true}));
             replayAction=owner.Attach(panel);Check(replayAction,"Local chart score details expose reenactment action beside native replay controls");
+            replayAnalysisAction=panel.areaRep.transform.Find("BetterMalodyV.ReplayAnalysis")?.GetComponent<UnityEngine.UI.Button>();
+            Check(replayAnalysisAction,"Local chart score details expose full-screen analysis action");
             Check(owner.Attach(panel)==replayAction,"Reopening discovery does not duplicate replay action");
             var canvas=panel.GetComponentInParent<Canvas>();canvas.renderMode=RenderMode.ScreenSpaceCamera;canvas.worldCamera=captureCamera;canvas.planeDistance=1;
             replayCaptureAt=Time.unscaledTime+1.2f;
         }
         catch(Exception ex){WriteResult(ex);exitAt=Time.unscaledTime+.2f;}
+    }
+    private void BeginReplayAnalysisCapture()
+    {
+        var chart=new List<ReplayChartNote>();var actions=new List<ReplayInputAction>();var hits=new List<ReplayHitEvent>();
+        for(var index=0;index<32;index++)
+        {
+            var lane=index%4;var time=5000+index*250;
+            chart.Add(new(time,lane));actions.Add(new(time+6,lane,true));actions.Add(new(time+74,lane,false));
+            hits.Add(new(time+6,lane,ReplayAnalysisEngine.GameJudgementFlags.Best));
+        }
+        var analysis=ReplayAnalysisEngine.Analyze(chart,actions,hits,4);
+        var session=new ReplayAnalysisSession("Replay analysis fixture","Local chart","Normal","fixture.mrv","Key",123456,200,98.5,"S",analysis);
+        ReplayAnalysisView.TestCamera=captureCamera;
+        ReplayAnalysisView.Open(replayAnalysisAction!.GetComponentInChildren<TextMeshProUGUI>(),session);
+        Check(ReplayAnalysisView.IsOpen,"Analysis action opens the full-screen report");
+        var tabs=ReplayAnalysisView.TestRoot!.GetComponentsInChildren<UnityEngine.UI.Button>(true)
+            .Where(button=>button.name.StartsWith("Tab ",StringComparison.Ordinal)).ToArray();
+        foreach(var tab in tabs)tab.onClick.Invoke();
+        Check(tabs.All(tab=>tab.gameObject.activeInHierarchy),"All analysis sections remain reachable from the top bar");
+        tabs[0].onClick.Invoke();Canvas.ForceUpdateCanvases();
+        replayAnalysisCaptureAt=Time.unscaledTime+1.2f;
     }
     private void BeginRoomCapture()
     {

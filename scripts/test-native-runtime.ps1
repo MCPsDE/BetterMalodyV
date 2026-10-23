@@ -31,7 +31,7 @@ $env:BETTER_MALODYV_TEST_ROOM_VISUAL = if ($RoomVisual) {'1'}else{'0'}
 $env:BETTER_MALODYV_TEST_UPDATE_VISUAL = if ($UpdateVisual) {'1'}else{'0'}
 $env:BETTER_MALODYV_TEST_REPLAY_VISUAL = if ($ReplayVisual) {'1'}else{'0'}
 try {
-    foreach ($name in @('result.json','search-filter-fixture.png')) {
+    foreach ($name in @('result.json','search-filter-fixture.png','replay-action.png','replay-analysis-overview.png','replay-analysis-tracks.png','replay-analysis-presses.png','replay-analysis-profiles.png')) {
         $previous = Join-Path $hostRoot $name
         if (Test-Path -LiteralPath $previous) { Remove-Item -LiteralPath $previous -Force }
     }
@@ -50,6 +50,11 @@ try {
     Copy-Item (Join-Path $hostRoot 'result.json') (Join-Path $evidence "search-native-$($Width)x$Height.json") -Force
     if($RoomVisual){Copy-Item (Join-Path $hostRoot 'room-update-fixture.png') (Join-Path $evidence "room-native-$($Width)x$Height.png") -Force}
     if($UpdateVisual){foreach($state in @('download','verifying','ready','failed','unknown')){Copy-Item (Join-Path $hostRoot "game-update-$state.png") (Join-Path $evidence "update-$state-$($Width)x$Height.png") -Force}}
-    if($ReplayVisual){Copy-Item (Join-Path $hostRoot 'replay-action.png') (Join-Path $evidence "replay-action-$($Width)x$Height.png") -Force}
+    if($ReplayVisual){
+        Copy-Item (Join-Path $hostRoot 'replay-action.png') (Join-Path $evidence "replay-action-$($Width)x$Height.png") -Force
+        foreach($page in @('overview','tracks','presses','profiles')){
+            Copy-Item (Join-Path $hostRoot "replay-analysis-$page.png") (Join-Path $evidence "replay-analysis-$page-$($Width)x$Height.png") -Force
+        }
+    }
     Write-Output "PASS: $($result.checks.Count) native checks using the real search prefab at $($Width)x$Height."
 } finally { Remove-Item Env:BETTER_MALODYV_TEST_OUTPUT,Env:BETTER_MALODYV_TEST_WIDTH,Env:BETTER_MALODYV_TEST_HEIGHT,Env:BETTER_MALODYV_TEST_METADATA,Env:BETTER_MALODYV_TEST_ROOM_VISUAL,Env:BETTER_MALODYV_TEST_UPDATE_VISUAL,Env:BETTER_MALODYV_TEST_REPLAY_VISUAL }
