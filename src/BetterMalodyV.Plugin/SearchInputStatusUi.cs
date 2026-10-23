@@ -22,7 +22,7 @@ internal static class SearchFilterUi
         {
             var source = input.textComponent;
             var fontSize = source.fontSize;
-            var height = Math.Max(40,input.GetComponent<RectTransform>().rect.height-8);
+            var height = Math.Max(36,input.GetComponent<RectTransform>().rect.height-12);
             var items = new List<(RectTransform Rect,float Width)>();
             var toggles = new List<(StatusMask Flag,Toggle Toggle,Image Background)>();
             void Paint()
@@ -31,24 +31,22 @@ internal static class SearchFilterUi
                 {
                     var on = (Plugin.Selection & flag) != 0;
                     toggle.SetIsOnWithoutNotify(on);
-                    background.color = on ? new Color(.42f,.42f,.42f,.55f) : new Color(.32f,.32f,.32f,.30f);
+                    background.color = on ? new Color(.8f,.8f,.8f,.15f) : new Color(.8f,.8f,.8f,.07f);
                 }
             }
             foreach (var (flag,label) in new[] { (StatusMask.Stable,"Stable"),(StatusMask.Beta,"Beta"),(StatusMask.Alpha,"Alpha") })
             {
                 var rect = CreateRect("Status."+flag,root);
                 var background = rect.gameObject.AddComponent<Image>();
-                var toggle = rect.gameObject.AddComponent<Toggle>(); toggle.targetGraphic = background;
-                var box = CreateRect("Checkbox",rect);
-                box.anchorMin = box.anchorMax = box.pivot = new Vector2(0,.5f);
-                box.anchoredPosition = new Vector2(8,0); box.sizeDelta = new Vector2(20,20);
-                box.gameObject.AddComponent<Image>().color = new Color(.75f,.75f,.75f,1);
-                var tick = CreateRect("Checked",box);
-                tick.anchorMin = tick.anchorMax = new Vector2(.5f,.5f); tick.sizeDelta = new Vector2(12,12);
-                var mark = tick.gameObject.AddComponent<Image>(); mark.color = new Color(.92f,.92f,.92f,1);
+                var toggle = rect.gameObject.AddComponent<Toggle>(); toggle.targetGraphic = background;toggle.toggleTransition=Toggle.ToggleTransition.None;
+                var tick = CreateRect("Checked",rect);
+                tick.anchorMin = tick.anchorMax = tick.pivot = new Vector2(0,.5f);
+                tick.anchoredPosition = new Vector2(10,0); tick.sizeDelta = new Vector2(18,18);
+                var mark = tick.gameObject.AddComponent<Image>(); mark.sprite = NativeUi.Checkmark;
+                mark.color = new Color(.96f,.96f,.96f,1); mark.raycastTarget=false;
                 toggle.graphic = mark;
                 var text = Label(rect,label,source,fontSize,36,height);
-                var width = text.GetPreferredValues(label).x+48;
+                var width = Math.Max(text.GetPreferredValues("Stable").x,text.GetPreferredValues("Alpha").x)+48;
                 rect.sizeDelta = new Vector2(width,height);
                 text.rectTransform.sizeDelta = new Vector2(width-40,height);
                 items.Add((rect,width)); toggles.Add((flag,toggle,background));
@@ -58,7 +56,7 @@ internal static class SearchFilterUi
                 }));
             }
             var resetRect = CreateRect("All",root);
-            var resetBackground = resetRect.gameObject.AddComponent<Image>(); resetBackground.color = new Color(.32f,.32f,.32f,.30f);
+            var resetBackground = resetRect.gameObject.AddComponent<Image>(); resetBackground.color = new Color(.8f,.8f,.8f,.07f);
             var reset = resetRect.gameObject.AddComponent<Button>(); reset.targetGraphic = resetBackground;
             var resetText = Label(resetRect,"All",source,fontSize,10,height);
             var resetWidth = resetText.GetPreferredValues("All").x+24;

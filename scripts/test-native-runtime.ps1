@@ -1,5 +1,5 @@
 param([string]$GameRoot = 'E:\Program Files (x86)\Steam\steamapps\common\MalodyV', [switch]$ReuseHost,
-    [int]$Width = 1440,[int]$Height = 900,[switch]$UseInstalledMetadata)
+    [int]$Width = 1440,[int]$Height = 900,[switch]$UseInstalledMetadata,[switch]$RoomVisual)
 $ErrorActionPreference = 'Stop'
 $repo = [IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..'))
 $hostRoot = Join-Path $repo 'artifacts\native-test'
@@ -27,6 +27,7 @@ $env:BETTER_MALODYV_TEST_OUTPUT = $hostRoot
 $env:BETTER_MALODYV_TEST_WIDTH = $Width.ToString()
 $env:BETTER_MALODYV_TEST_HEIGHT = $Height.ToString()
 $env:BETTER_MALODYV_TEST_METADATA = if ($UseInstalledMetadata) { '1' } else { '0' }
+$env:BETTER_MALODYV_TEST_ROOM_VISUAL = if ($RoomVisual) {'1'}else{'0'}
 try {
     foreach ($name in @('result.json','search-filter-fixture.png')) {
         $previous = Join-Path $hostRoot $name
@@ -45,5 +46,6 @@ try {
     $evidence = Join-Path $repo '.impeccable\review'
     Copy-Item (Join-Path $hostRoot 'search-filter-fixture.png') (Join-Path $evidence "search-native-$($Width)x$Height.png") -Force
     Copy-Item (Join-Path $hostRoot 'result.json') (Join-Path $evidence "search-native-$($Width)x$Height.json") -Force
+    if($RoomVisual){Copy-Item (Join-Path $hostRoot 'room-update-fixture.png') (Join-Path $evidence "room-native-$($Width)x$Height.png") -Force}
     Write-Output "PASS: $($result.checks.Count) native checks using the real search prefab at $($Width)x$Height."
-} finally { Remove-Item Env:BETTER_MALODYV_TEST_OUTPUT,Env:BETTER_MALODYV_TEST_WIDTH,Env:BETTER_MALODYV_TEST_HEIGHT,Env:BETTER_MALODYV_TEST_METADATA }
+} finally { Remove-Item Env:BETTER_MALODYV_TEST_OUTPUT,Env:BETTER_MALODYV_TEST_WIDTH,Env:BETTER_MALODYV_TEST_HEIGHT,Env:BETTER_MALODYV_TEST_METADATA,Env:BETTER_MALODYV_TEST_ROOM_VISUAL }

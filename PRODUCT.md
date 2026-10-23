@@ -8,11 +8,13 @@ Windows x64 desktop, native WinForms; Malody V Unity IL2CPP.
 
 ## Users and purpose
 
-Malody V 玩家安装优化插件后照常从 Steam 启动游戏。首个功能是在大厅及联机房间选曲时按本地谱面状态筛选歌曲和谱面。
+Malody V 玩家照常从 Steam 启动游戏，使用本地谱面筛选、房主谱面更新和房员分享版本同步。
 
 ## Capabilities and constraints
 
 用户指定沿用 MalodyVThemeLoader 的安装器、BepInEx 安装与复用逻辑、管理器视觉风格、赞助入口和 GitHub Release 自动更新流程。管理面板以阅读功能说明为中心，内容来自可手动编辑的 Markdown。安装时创建独立桌面快捷方式。图标来自用户提供的 BetterMalodyV.jpg，仅去除外围黑色背景。
+
+1.1.0：三个状态控件等宽、对齐、淡灰半透明，以勾号表示选中；功能说明每项一句话；游戏启动和运行期间检查更新，下载校验后在非游玩/编辑状态正常退出、安装并自动重启，无需打开管理面板。
 
 ## Stack
 

@@ -11,6 +11,7 @@ using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 using UnityEngine.EventSystems;
+using UnityEngine.SceneManagement;
 
 namespace BetterMalodyV.Plugin;
 
@@ -33,12 +34,15 @@ public sealed class RuntimeVerification : MonoBehaviour
     private int realSongSamples,realStatusMatches;
     private static int scanAttempts;
     private static bool blockScans;
+    private float roomCaptureAt=float.PositiveInfinity;
+    private UnityEngine.UI.Button? roomUpdateButton;
     private static int Width => int.TryParse(Environment.GetEnvironmentVariable("BETTER_MALODYV_TEST_WIDTH"),out var width) ? width : 1440;
     private static int Height => int.TryParse(Environment.GetEnvironmentVariable("BETTER_MALODYV_TEST_HEIGHT"),out var height) ? height : 900;
     public static void Install(Plugin plugin, Harmony harmony)
     {
         if (string.IsNullOrWhiteSpace(Root)) throw new InvalidOperationException("Verification output required");
         harmony.Patch(AccessTools.Method(typeof(SceneLogo),"Start"), prefix: new HarmonyMethod(typeof(RuntimeVerification),nameof(SkipLogo)));
+        harmony.Patch(AccessTools.Method(typeof(SceneRoom),"Start"), prefix: new HarmonyMethod(typeof(RuntimeVerification),nameof(SkipLogo)));
         plugin.AddComponent<RuntimeVerification>();
         harmony.Patch(Plugin.Adapter.ScanFiles,prefix:new HarmonyMethod(typeof(RuntimeVerification),nameof(TrackScan)));
     }
@@ -69,7 +73,28 @@ public sealed class RuntimeVerification : MonoBehaviour
                 image.ReadPixels(new Rect(0,0,Width,Height),0,0); image.Apply();
                 File.WriteAllBytes(Path.Combine(Root,"search-filter-fixture.png"),ImageConversion.EncodeToPNG(image));
                 RenderTexture.active = null;
-                exitAt = Time.unscaledTime+.2f;
+                if(Environment.GetEnvironmentVariable("BETTER_MALODYV_TEST_ROOM_VISUAL")=="1")
+                {
+                    try { BeginRoomCapture();roomCaptureAt=Time.unscaledTime+1.2f; }
+                    catch(Exception ex){WriteResult(ex);exitAt=Time.unscaledTime+.2f;}
+                }
+                else exitAt = Time.unscaledTime+.2f;
+            }
+            if(Time.unscaledTime>=roomCaptureAt && captureCamera is not null)
+            {
+                roomCaptureAt=float.PositiveInfinity;
+                try
+                {
+                    PrepareRoomCapture();
+                    var label=roomUpdateButton!.GetComponentInChildren<TextMeshProUGUI>();
+                    Check(label.GetPreferredValues(label.text).x+24<=roomUpdateButton.GetComponent<RectTransform>().rect.width,"Actual room update label fits at native font size");
+                    Canvas.ForceUpdateCanvases();captureCamera.Render();RenderTexture.active=captureCamera.targetTexture;
+                    var bitmap=new Texture2D(Width,Height,TextureFormat.RGB24,false);bitmap.ReadPixels(new Rect(0,0,Width,Height),0,0);bitmap.Apply();
+                    File.WriteAllBytes(Path.Combine(Root,"room-update-fixture.png"),ImageConversion.EncodeToPNG(bitmap));RenderTexture.active=null;
+                    WriteResult();
+                }
+                catch(Exception ex){WriteResult(ex);}
+                exitAt=Time.unscaledTime+.2f;
             }
             if (Time.unscaledTime >= exitAt) Application.Quit();
             return;
@@ -77,7 +102,7 @@ public sealed class RuntimeVerification : MonoBehaviour
         ran = true;
         try
         {
-            TestNativeData(); TestControls();
+            TestNativeData(); TestRoomBindings(); RoomRuntimeTests.Run(Check); TestControls();
             captureAt = Time.unscaledTime+1.2f;
         }
         catch (Exception ex)
@@ -87,6 +112,48 @@ public sealed class RuntimeVerification : MonoBehaviour
         }
     }
     private void Check(bool condition,string label) { if (!condition) throw new Exception(label); checks.Add(label); }
+    private void BeginRoomCapture()
+    {
+        realPanel!.GetComponentInParent<Canvas>().gameObject.SetActive(false);
+        RoomChartController.Current!.enabled=false;
+        SceneManager.LoadScene("SceneRoom",LoadSceneMode.Additive);
+    }
+    private void PrepareRoomCapture()
+    {
+        var owner=UnityEngine.Object.FindObjectOfType<SceneRoom>();Check(owner is not null,"Actual native Room scene loads for isolated visual fixture");
+        var controller=RoomChartController.Current!;controller.enabled=false;
+        controller.TestContext(owner!,new RoomInfo{Roomid=1,Hostid=1,ChartTitle="Visual fixture",ChartHash=""});
+        owner!.panelSong.title.text="Sample song (visual fixture)";owner.panelSong.artist.text="Room update preview";
+        owner.panelSong.iconDL.SetActive(false);roomUpdateButton=controller.TestAction(owner);
+        foreach(var canvas in UnityEngine.Object.FindObjectsOfType<Canvas>())
+            if(canvas.gameObject.scene.name=="SceneRoom") {canvas.renderMode=RenderMode.ScreenSpaceCamera;canvas.worldCamera=captureCamera;canvas.planeDistance=1;}
+    }
+    private void TestRoomBindings()
+    {
+        var controller=RoomChartController.Current??throw new Exception("Room feature bindings did not initialize");
+        var api=controller.Api;
+        var info=new RoomInfo {Roomid=1,Hostid=200,ChartId=123,SongId=456,ChartHash=new string('a',32),ChartTitle="Test chart",ChartDiff="Lv.5"};
+        var record=api.Record(info);
+        Check((uint)RoomGameApi.Get(record,"yug")==123 && (uint)RoomGameApi.Get(record,"yuh")==456,"Official download record binds chart/song identity");
+        Check((string)RoomGameApi.Get(record,"yuj")=="","Host query requests latest official version by ID");
+        var framework=typeof(PlayModeType).Assembly;
+        var onlineInfo=framework.GetTypes().Single(t=>t.GetMethods(BindingFlags.Public|BindingFlags.NonPublic|BindingFlags.Instance).Any(m=>m.Name=="get_Self"));
+        var self=onlineInfo.GetMethod("get_Self")!.Invoke(RoomGameApi.Singleton(onlineInfo),null)!;
+        var user=self.GetType().GetProperties().Single(p=>p.PropertyType==typeof(uint));var saved=user.GetValue(self);
+        try
+        {
+            user.SetValue(self,(uint)200);Check(api.IsHost(info),"Host button uses actual local user ID");
+            user.SetValue(self,(uint)201);Check(!api.IsHost(info),"Room member cannot invoke host update");
+        }
+        finally{user.SetValue(self,saved);}
+        var method=api.OnlineType.GetMethods().Single(m=>m.GetParameters().Length==1 && m.GetParameters()[0].ParameterType==api.RecordType && m.ReturnType.IsGenericType && m.ReturnType.GenericTypeArguments[0].FullName=="Malody.JSON.RespDownload");
+        var pack=Activator.CreateInstance(method.ReturnType.GenericTypeArguments[0])!;
+        var completed=Activator.CreateInstance(method.ReturnType,new[]{pack})!;
+        var awaitable=new NativePending(completed);
+        Check(awaitable.Poll() && awaitable.Result is not null,"Actual native UniTask completion/results consumed without blocking");
+        Check(api.ShareMoveNext.DeclaringType!.Name.StartsWith("_HandleChartShare_d__"),"Share hook targets chart receiver only, excluding skin sharing");
+        Check(Directory.GetParent(api.ChartRoot)!.FullName==BepInEx.Paths.GameRootPath.TrimEnd('\\'),"Room import destination is isolated game chart directory");
+    }
     [Il2CppInterop.Runtime.Attributes.HideFromIl2Cpp]
     private void WriteResult(Exception? error = null) => File.WriteAllText(Path.Combine(Root,"result.json"),
         JsonSerializer.Serialize(new { passed = error is null,error = error?.ToString(),checks,
@@ -277,6 +344,10 @@ public sealed class RuntimeVerification : MonoBehaviour
         }
         foreach(var label in controls.GetComponentsInChildren<TextMeshProUGUI>())
             Check(label.GetPreferredValues(label.text).x <= label.rectTransform.rect.width,"Full one-line status label fits: "+label.text);
+        var sizes=toggles.Select(t=>t.GetComponent<RectTransform>().rect.size).ToArray();
+        Check(sizes.All(s=>s==sizes[0]),"Three status controls have identical width and height");
+        foreach(var toggle in toggles)
+            Check(toggle.graphic.TryCast<Image>()?.sprite is not null,"Selected status uses an actual checkmark sprite");
         Check(input.text == "Search text remains editable","Attaching controls preserves search text");
         var text = new string('W',120); input.text = text;
         Check(input.text == text,"Long search text remains editable");
@@ -288,6 +359,8 @@ public sealed class RuntimeVerification : MonoBehaviour
         Check(Plugin.Selection == (StatusMask.Alpha|StatusMask.Beta),"Native keyboard submit toggles Stable");
         button.onClick.Invoke();
         input.text = "Search";
+        toggles[1].isOn=false;toggles[2].isOn=false;
+        Check(toggles[0].graphic.canvasRenderer.GetAlpha()>.9f && toggles[1].graphic.canvasRenderer.GetAlpha()<.01f && toggles[2].graphic.canvasRenderer.GetAlpha()<.01f,"Only selected Stable has a visible checkmark");
         WriteResult();
     }
 }

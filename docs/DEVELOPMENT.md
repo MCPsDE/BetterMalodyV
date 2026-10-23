@@ -1,39 +1,14 @@
-# 开发与兼容说明
+# 开发与验证
 
-游戏参考源工程：`E:\UnityProjects\Emiria`。当前安装游戏：`E:\Program Files (x86)\Steam\steamapps\common\MalodyV`。开发时均只读。参考安装器：`E:\Desktop\MalodyVThemeLoader`，未修改参考工程。
+- 构建使用 PowerShell 7、.NET 8/10 和 BepInEx 6.0.0-be.785；`scripts/build-release.ps1` 输出到 artifacts/release。
+- 源游戏、Emiria 和 ThemeLoader 参考工程只读，测试宿主位于 artifacts。
+- 状态谓词读取已加载记录或后台数据库副本索引，禁止在显示列表写锁内扫描曲库；2 万首未加载歌曲的原生压力测试保持零次 ScanFiles。
+- 房主通过当前游戏的官方 QueryDownloadInfo/DownloadAndImport/SendChangeChart 接口查询、下载和选谱，不改网络协议。
+- 房员只接收当前等待房间、当前房主选中哈希对应的 HTTPS 分享，校验包内准确谱面后事务替换；换房、换谱、哈希错误或重载失败会取消或回滚。
+- 支持当前 6.7 发行版，混淆字段集中在 RoomGameApi 并校验类型；不支持的接口只停用联机增强。
+- 游戏更新由隐藏助手下载并校验，独立安装器校验 PID/路径、请求正常退出、安装并重新启动；游玩或编辑期间延后，失败有冷却。
+- FEATURES.md 每项一句话，未修改的安装副本随版本更新，用户手改副本保留。
 
-## 数据
+验证入口：`tests/BetterMalodyV.Tests.csproj`、`scripts/test-native-runtime.ps1 -RoomVisual`、`scripts/test-package.ps1`、`scripts/test-game-update.ps1`。
 
-`Protocol.dll` 的 `Malody.DB.ChartRecord.RankStatus` 持久保存本地状态。`MaChart.Keyword` 还会聚合 `type=<状态>` 到歌曲 Searchwords，但单张谱面在线更新状态后这个字符串可能过期，因此本插件直接读取谱面记录。没有独立 Promotion 值，推荐的 Alpha 保持状态 0。
-
-## 绑定与筛选
-
-实际发行版混淆了 Song、ChartManager、meta 和 ShowList 等别名。`GameAdapter` 按保留的 `RebuildShowList`、`RefreshDisplayList`、`IsContain`、唯一泛型显示列表、`ChartRecord` 类型绑定，启动时验证唯一性。遇到歧义，卸下补丁并保留原始游戏行为，日志记录具体错误。
-
-歌曲筛选只在原始 `IsContain` 返回 true 后收窄，保留原关键词、收藏夹等逻辑；选定模式时，同一张谱面须满足模式和状态。1.0.2 删除该谓词中的 `ScanFiles`：它处于 `RefreshDisplayList` 写锁内，旧实现会在主线程对全库遍历目录、加载与解析谱面，曲库大时造成长时间阻塞。未加载歌曲直接查询不可变的文件夹/模式/状态索引；已加载歌曲读取当前内存谱面状态。原始完整图表映射不变，不写 RankStatus，不修改成绩或网络协议。
-
-LocalStatusStore 在托管后台工作线程复制 `chart.bin` 到独立临时文件，使用当前游戏 LibCpp 的既有 UnqDB 导出只读取副本。不会打开/锁定/关闭游戏的数据库句柄，不在后台调用 Unity 或 IL2CPP 接口。轻量 protobuf 读取器只提取 Path(7)、ChartMode(15)、RankStatus(16)，按路径祖先聚合各游戏模式的三位状态集合，发布后只读。格式到模式的映射与实际游戏 getter 在原生测试逐项比对。副本若读取期间源文件发生变化，则丢弃，下次重试；重复相同错误只记录一次。
-
-控制器每五秒异步检查缓存文件变更，索引准备完成后在主线程刷新列表，等待原有全库扫描结束再刷新；联机选曲面板不监听 ChartLoaded，因此另外刷新其列表。索引准备期间不阻塞谓词；首次限制筛选可能暂时为空，准备后自动更新。进入一首未加载的歌曲时才执行该歌曲原有的 ScanFiles，过滤后恢复 ShowList。
-
-歌曲内列表只在大厅 `SceneChart.Refresh` 状态机的同步 MoveNext 与联机 `PanelRoomChart.OpenChart` 执行期间暂时收窄 ShowList；完成或异常时立即恢复。这样实际原生列表与选中索引都按过滤后条目生成，且后台完整谱面映射、编辑和通过 hash 访问不受影响。所有临时修改均在 UI 主线程。
-
-搜索 UI 加在双方共用的 PanelSearchSong.input 内部右侧，使用原输入字体、按真实文字宽度排列 Unity 原生 Toggle；textViewport 留出控件宽度，输入内容/光标/占位符不与勾选框重叠。1.0.1 不再依赖 side/middle 层级或向下扩展被裁切的筛选区。Alpha 标签包含 Promotion，All 恢复全部。
-
-IL2CPP 可能内联极短的 Show；当前 interop 的 Show 标注 CallerCount(0)，因此除原 Show postfix 外，SearchFilterController 每 0.2 秒只查找活动 PanelSearchSong，按 input 引用补挂缺失控件，重复打开保持幂等。成功挂载写入面板名、控件宽度与输入区宽度；同一实例失败只记录一次。原生验证直接使用当前游戏 FrontLayerManager 引用的 SearchAdv 预制体，并刻意不调用 Show，验证实际控制器能自动发现。
-
-配置保存为 `BepInEx/config/com.mcpsde.bettermalodyv.cfg` 的 Search/StatusMask，0=空、7=全部（含未知）。
-
-## 安装与更新
-
-BepInEx、Doorstop 的版本、检测、兼容复用、拒绝覆盖无主文件、暂存复制、逐文件回滚及哈希所有权沿用参考实现。独立路径为 `BetterMalodyV/` 和 `BepInEx/plugins/BetterMalodyV/`，独立清单和快捷方式。卸载若检测到其他插件，会保留共享运行环境。安装器修改目标文件前先留本次回滚备份，失败时恢复。
-
-已安装 FEATURES.md 为可编辑文件，通过安装清单中的原始哈希识别手动修改，修复/升级保留手动修改过的文件，未修改或缺失时复制发行版文档。面板缺少外部文档时使用嵌入副本。修改仓库文档会影响后续安装和未手动修改的升级用户。
-
-更新使用 `MCPsDE/BetterMalodyV` 的正式 Release，绑定 `BetterMalodyV-Setup-<版本>.exe` 和 SHA256SUMS.txt。校验成功后，更新器等待管理器 PID 退出再替换，避免原参考实现的文件锁竞争。完成后重新打开面板。没有新版本和 API 限流不影响正常使用。
-
-## 验证
-
-构建、真实 interop 成员和结构验证、一次性假游戏目录中的安装/修复/回滚/卸载、保留已有 BepInEx/其他插件、浅深色/最小与普通尺寸及 125/150/200% 合成缩放。合成缩放不代表物理多显示器 DPI 实测。
-
-开发中的 Unity 原生运行测试与假谱面数据必须在 artifacts 下单独宿主完成；不能启动、改写或结束用户的真实游戏进程。验证结果见 VERIFICATION.md。
+原生证据在 .impeccable/review：真实 SearchAdv/SceneRoom 的隔离捕获，官方请求/结果与房员下载使用固定响应模拟；没有真实双账号联机，也未作物理多屏 DPI 验证。

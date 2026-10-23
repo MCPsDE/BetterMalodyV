@@ -21,6 +21,7 @@
   <PropertyGroup Condition="'$(RuntimeVerification)' == 'true'"><DefineConstants>$(DefineConstants);BETTER_MALODYV_VERIFY</DefineConstants></PropertyGroup>
   <ItemGroup Condition="'$(RuntimeVerification)' == 'true'">
     <Compile Include="..\..\tests\RuntimeVerification.cs" Link="RuntimeVerification.cs" />
+    <Compile Include="..\..\tests\RoomRuntimeTests.cs" Link="RoomRuntimeTests.cs" />
     <Reference Include="$(GameInteropRoot)\UnityEngine.ScreenCaptureModule.dll" Private="false" />
     <Reference Include="$(GameInteropRoot)\UnityEngine.ImageConversionModule.dll" Private="false" />
   </ItemGroup>

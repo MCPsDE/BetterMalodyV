@@ -1,14 +1,14 @@
 {
   "schemaVersion": 2,
-  "generatedAt": "2026-10-22T15:58:13.267Z",
+  "generatedAt": "2026-10-23T04:14:12.411Z",
   "title": "Design System: BetterMalodyV",
   "extensions": {
     "nativeStatus": {
-      "scope": "Unity search input status labels, 1.0.2",
-      "selectedFill": "rgba(107,107,107,0.55)",
-      "unselectedFill": "rgba(82,82,82,0.30)",
-      "checkboxMark": "#EBEBEB",
-      "checkboxFrame": "#BFBFBF"
+      "scope": "Unity search input status labels, 1.1.0",
+      "selectedFill": "rgba(204,204,204,0.15)",
+      "unselectedFill": "rgba(204,204,204,0.07)",
+      "checkmarkColor": "#F5F5F5",
+      "checkmarkSprite": "NativeUi.Checkmark; two strokes, visible only when selected"
     },
     "colorMeta": {
       "accent": {
@@ -535,7 +535,7 @@
       "kind": "custom",
       "refersTo": "document",
       "description": "Browser illustration of the native read-only RichTextBox; source Markdown remains editable outside the manager.",
-      "html": "<article class=\"ds-document\" tabindex=\"0\" aria-label=\"BetterMalodyV 优化与修改说明\"><h1>BetterMalodyV</h1><p>让选曲更顺手。这里列出插件当前提供的全部优化与修改。</p><h2>按谱面状态筛选</h2><p>在大厅与联机房间的高级搜索中，搜索输入框内部右侧新增 Stable、Beta、Alpha 勾选框和 All 按钮。</p></article>",
+      "html": "<article class=\"ds-document\" tabindex=\"0\" aria-label=\"BetterMalodyV 优化与修改说明\"><h1>BetterMalodyV</h1><ul><li><strong>状态筛选</strong>：大厅与联机搜索支持 Stable、Beta、Alpha（含 Promotion）多选，等宽半透明按钮以勾号表示启用。</li><li><strong>房主更新</strong>：房主选中的官方谱面有新版时，房间内显示下载更新按钮。</li><li><strong>分享同步</strong>：房员接收房主分享时，自动校验并替换本地版本不一致的谱面。</li><li><strong>自动更新</strong>：进入游戏及运行期间自动检查新版，校验安装包后等待本局结束、更新并重启游戏。</li></ul></article>",
       "css": ".ds-document{background:#181818;color:#F5F5F5;font:10.5pt 'Microsoft YaHei UI','Segoe UI Variable Text','Segoe UI',sans-serif;max-height:280px;overflow-y:auto;user-select:text}.ds-document h1{font-size:23pt;font-weight:700;margin:0 0 1em}.ds-document h2{font-size:16pt;font-weight:700;margin:1em 0}.ds-document p{margin:0 0 1em}.ds-document:focus-visible{outline:1px dotted #B8B8B8;outline-offset:2px}"
     },
     {

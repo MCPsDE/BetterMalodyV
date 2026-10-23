@@ -41,5 +41,16 @@ try {
         $type = $assembly.GetType($target[0])
         if (@($type.Methods | Where-Object Name -eq $target[1]).Count -ne 1) { throw "UI target changed: $target" }
     }
+    $share=$assembly.GetType('Malody.Scene.MP.WidgetMPShare')
+    $receiver=@($share.NestedTypes|Where-Object {$_.Name.StartsWith('_HandleChartShare_d__')})
+    if($receiver.Count -ne 1 -or @($receiver[0].Methods|Where-Object Name -eq 'MoveNext').Count -ne 1){throw 'Room chart-share receiver changed'}
+    $online=@($framework.Types|Where-Object {@($_.Methods|Where-Object Name -eq 'DownloadAndImport').Count -eq 2})
+    if($online.Count -ne 1){throw 'Official download API changed'}
+    $download=@($online[0].Methods|Where-Object {$_.Name -eq 'DownloadAndImport' -and $_.Parameters.Count -eq 1})[0]
+    $record=$download.Parameters[0].ParameterType.Resolve()
+    foreach($field in @(@('yug','System.UInt32'),@('yuh','System.UInt32'),@('yuj','System.String'),@('yuk','System.String'),@('version','System.String'))){
+        $properties=@($record.Properties|Where-Object Name -eq $field[0])
+        if($properties.Count -ne 1 -or $properties[0].PropertyType.FullName -ne $field[1]){throw "Room download field changed: $($field[0])"}
+    }
     Write-Output "PASS: $checked game/Unity references; unique Song, ChartRecord, IsContain and both selection UI contracts."
 } finally { $module.Dispose(); $resolver.Dispose() }

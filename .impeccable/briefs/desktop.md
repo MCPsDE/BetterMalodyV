@@ -2,9 +2,9 @@
 
 ## Scope and modes
 
-- **Manager — Read:** Malody V players ask what the installed plugin changes and how to use its filters. One selectable, scrolling document comes from editable local Markdown, with embedded fallback. Headings and lists provide wayfinding; refresh/F5 and update checking are supporting commands. The fixed footer carries appearance and sponsorship.
+- **Manager — Read:** Malody V players read four one-sentence features in one selectable, scrolling document from editable local Markdown, with embedded fallback. Refresh/F5 and update checking are supporting commands; the fixed footer carries appearance and sponsorship.
 - **Installer — Operate:** Players select or correct the game directory, inspect BepInEx compatibility, then install/repair, open the manager or uninstall. Path diagnosis, environment feedback and a scrollable log support the task. The primary install/repair action, progress and concise operation status stay outside the content viewport. Invalid, installed, busy, completed and failed states govern available commands.
-- **Game extension — Operate:** The existing advanced-search input receives combinable Stable/Beta/Alpha native toggles and an All reset inside its right edge. Labels are translucent neutral gray with neutral checkbox marks. It retains the input's TMP font, size and ink, measures full labels and reserves a separate left textViewport. An active-panel controller also mounts controls when native Show calls are inlined. Cached background status summaries keep whole-library scanning out of the filter predicate. Tests instantiate the actual shipped prefab in an isolated IL2CPP host, with synthetic stress songs and copies of the real metadata; this is not a real multiplayer session.
+- **Game extension — Operate:** Three equal status toggles use quiet translucent fills and an actual checkmark to show selection. The native room song area gains a measured Update action for a host’s outdated chart, while members automatically replace a verified host share. Search text and song title/artist space remain separate from actions. Cached summaries keep whole-library scanning out of filtering. Startup updates use a hidden helper and normal game exit/restart. Evidence is isolated native scenes, synthetic network responses and copied metadata, not a real multiplayer session.
 
 ## Direction contract
 
@@ -22,4 +22,4 @@
 
 ## Handoff
 
-The native review matched the reuse contract. Its one material minimum-installer clipping finding was resolved using `installer-minimum-native.png`, an actual OS capture that shows the scrolling viewport clipping correctly. Ship disposition is scoped to that finding. The other 24 desktop images form a synthetic size/scale matrix; their DrawToBitmap native-scrollbar painting artifact is not a design token. See `../review/documentation.md` for evidence boundaries. No redesign decision remains open in this handoff.
+The 1.1.0 finish review matched the visual/function contract except for a duplicate-update race; the corrected normalized-root ownership passed the follow-up verdict, with ship disposition scoped to that finding. Current native scenes and manager captures match the documented controls and concise feature list. Tests remain isolated and scaling remains synthetic; see `../review/documentation.md` for evidence boundaries. No redesign decision remains open.

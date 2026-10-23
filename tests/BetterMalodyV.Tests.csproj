@@ -4,6 +4,7 @@
     <ProjectReference Include="..\src\BetterMalodyV.Shared\BetterMalodyV.Shared.csproj" />
     <Compile Include="UpdateTests.cs" />
     <Compile Include="StatusIndexTests.cs" />
+    <Compile Include="SharedChartTests.cs" />
     <Compile Include="..\src\BetterMalodyV.Manager\UpdateService.cs" Link="UpdateService.cs" />
   </ItemGroup>
 </Project>

@@ -6,7 +6,7 @@ Read PRODUCT.md, DESIGN.md and docs/DEVELOPMENT.md before changing behavior. The
 
 Reference inputs are read-only: E:\UnityProjects\Emiria, E:\Desktop\MalodyVThemeLoader and E:\Program Files (x86)\Steam\steamapps\common\MalodyV. Put generated files and isolated game hosts under artifacts; never end a user's real game process. Isolated Steam test hosts need their own steam_appid.txt to avoid forwarding to the installed game.
 
-Runtime changes are limited to local song/chart selection UI and its status predicate. Preserve raw chart collections, original state values, editing, scoring, judgement, replay, authentication and network behavior. Do not patch Guardian or entitlement checks.
+Runtime changes include local song/chart selection and, as authorized for 1.1.0, room-host chart updates plus replacing mismatched room-shared local chart files; reuse official download/selection APIs and preserve protocol, scoring, judgement, replay and authentication. Do not patch Guardian or entitlement checks.
 
 Use shared Windows components. Keep full action labels on one line with actual font/DPI measurement and reflow; no clipped commands, wrapping or smaller fonts as a workaround. Native numeric controls must retain themed steppers, typing, arrow keys and accessibility. Test affected screens in dark/light where applicable, minimum/normal size and relevant synthetic scales; distinguish these from physical DPI tests.
 

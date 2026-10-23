@@ -18,7 +18,8 @@ internal static class UpdateService
         IProgress<string>? progress = null,
         CancellationToken cancellationToken = default,
         HttpClient? testClient = null,
-        Func<System.Diagnostics.ProcessStartInfo, System.Diagnostics.Process?>? testLauncher = null)
+        Func<System.Diagnostics.ProcessStartInfo, System.Diagnostics.Process?>? testLauncher = null,
+        int? gameProcessId = null)
     {
         if (string.Equals(
                 Environment.GetEnvironmentVariable("BETTER_MALODYV_DISABLE_UPDATES"),
@@ -131,9 +132,10 @@ internal static class UpdateService
                     UseShellExecute = true,
                     WindowStyle = System.Diagnostics.ProcessWindowStyle.Normal
                 };
-                start.ArgumentList.Add("--update");
+                start.ArgumentList.Add(gameProcessId.HasValue?"--update-game":"--update");
                 start.ArgumentList.Add(Path.GetFullPath(gameRoot));
                 start.ArgumentList.Add(Environment.ProcessId.ToString());
+                if(gameProcessId.HasValue)start.ArgumentList.Add(gameProcessId.Value.ToString());
                 _ = (testLauncher is null ? System.Diagnostics.Process.Start(start) : testLauncher(start))
                     ?? throw new InvalidOperationException("无法启动更新安装器。");
                 return UpdateResult.Started(latestVersion);

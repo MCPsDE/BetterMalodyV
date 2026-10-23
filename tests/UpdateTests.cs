@@ -7,6 +7,7 @@ using BetterMalodyV.Shared;
 
 Environment.SetEnvironmentVariable("BETTER_MALODYV_DISABLE_UPDATES",null);
 StatusIndexTests.Run();
+SharedChartTests.Run();
 var assertions = 0;
 void Check(bool condition,string label) { if (!condition) throw new Exception(label); assertions++; }
 Check(StatusSelection.Matches(StatusMask.All,10),"All includes unknown");
@@ -30,6 +31,23 @@ foreach(var scenario in new[] { "same","older","missing","bad-hash","good","limi
     Check(launched == (scenario == "good"),scenario + " launch gating");
 }
 Console.WriteLine($"PASS: {assertions} status/update assertions (real download/hash code, simulated HTTP; no installer executed).");
+foreach(var scenario in new[]{"good","bad-hash"})
+{
+    var started=false;using var client=new HttpClient(new Fixture(scenario));
+    var result=await UpdateService.CheckAndStartAsync(Path.GetTempPath(),testClient:client,testLauncher:start=>
+    {
+        started=true;
+        Check(start.ArgumentList.Count==4 && start.ArgumentList[0]=="--update-game","Game update selects restart protocol");
+        Check(start.ArgumentList[3]=="12345","Game update preserves original game PID");
+        return Process.GetCurrentProcess();
+    },gameProcessId:12345);
+    Check(started==(scenario=="good"),"Game restart installer only runs after checksum verification");
+    Check(result.State==(scenario=="good"?UpdateState.Started:UpdateState.Failed),"Game update result");
+}
+Check(GameUpdateProtocol.IsExpectedGame("E:/TestGame","E:/TestGame/Malody V.exe"),"Expected game executable accepted");
+Check(!GameUpdateProtocol.IsExpectedGame("E:/TestGame","E:/Other/Malody V.exe"),"Different installation is never closed");
+Check(GameUpdateProtocol.GateName("E:/TestGame/")==GameUpdateProtocol.GateName("e:/testgame"),"One update gate per normalized installation");
+Console.WriteLine($"PASS: {assertions} total update/protocol assertions including game-start checks and restart gating.");
 
 sealed class Fixture(string scenario) : HttpMessageHandler
 {

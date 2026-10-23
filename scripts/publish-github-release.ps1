@@ -12,7 +12,7 @@ foreach ($asset in $assets) { if (!(Test-Path $asset -PathType Leaf)) { throw "M
 $head = git -C $repoRoot rev-parse HEAD
 $remoteHead = gh api repos/MCPsDE/BetterMalodyV/commits/main --jq .sha
 if ($LASTEXITCODE -ne 0 -or $head -ne $remoteHead) { throw 'Push the release source commit to main before publishing.' }
-$notes = Join-Path $repoRoot 'docs\RELEASE_NOTES.md'
+$notes = Join-Path $repoRoot 'docs\FEATURES.md'
 $arguments = @('release','create',"v$version") + $assets + @('--repo','MCPsDE/BetterMalodyV','--target',$head,'--title',"BetterMalodyV $version",'--notes-file',$notes)
 if ($Draft) { $arguments += '--draft' }
 & gh @arguments
