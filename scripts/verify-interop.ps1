@@ -44,6 +44,12 @@ try {
     $share=$assembly.GetType('Malody.Scene.MP.WidgetMPShare')
     $receiver=@($share.NestedTypes|Where-Object {$_.Name.StartsWith('_HandleChartShare_d__')})
     if($receiver.Count -ne 1 -or @($receiver[0].Methods|Where-Object Name -eq 'MoveNext').Count -ne 1){throw 'Room chart-share receiver changed'}
+    $entry=@($share.Methods|Where-Object {$_.Name -eq 'rxb' -and !$_.IsStatic -and $_.ReturnType.FullName -eq 'System.Void' -and $_.Parameters.Count -eq 1 -and $_.Parameters[0].ParameterType.FullName -eq 'Malody.DB.SrvHostShare'})
+    if($entry.Count -ne 1){throw 'Room chart-share entry point changed'}
+    $event=@($share.Methods|Where-Object {$_.Name -eq 'rwy' -and !$_.IsStatic -and $_.ReturnType.FullName -eq 'System.Void' -and $_.Parameters.Count -eq 2 -and $_.Parameters[0].ParameterType.FullName -eq 'Malody.Network.TCPResponseTag' -and $_.Parameters[1].ParameterType.FullName -eq 'Malody.Network.Telepathy.ipa'})
+    if($event.Count -ne 1){throw 'Room share notification entry point changed'}
+    $response=@($framework.GetType('Malody.Network.Telepathy.ipa').Properties|Where-Object {$_.Name -eq 'zab' -and $_.PropertyType.FullName -eq 'Google.Protobuf.IMessage'})
+    if($response.Count -ne 1){throw 'Room share response field changed'}
     $online=@($framework.Types|Where-Object {@($_.Methods|Where-Object Name -eq 'DownloadAndImport').Count -eq 2})
     if($online.Count -ne 1){throw 'Official download API changed'}
     $download=@($online[0].Methods|Where-Object {$_.Name -eq 'DownloadAndImport' -and $_.Parameters.Count -eq 1})[0]

@@ -3,6 +3,9 @@ using Malody.DB;
 using Malody.Scene;
 using Malody.Scene.MP;
 using Malody.Chart;
+using Il2CppInterop.Runtime.InteropTypes;
+using Malody.Network;
+using Malody.Network.Telepathy;
 
 namespace BetterMalodyV.Plugin;
 
@@ -13,10 +16,11 @@ internal sealed class RoomGameApi
     private const BindingFlags Any=BindingFlags.Public|BindingFlags.NonPublic|BindingFlags.Instance|BindingFlags.Static;
     internal Type OnlineType { get; }
     internal Type RecordType { get; }
-    internal MethodInfo ShareMoveNext { get; }
+    internal MethodInfo ShareReceive { get; }
+    internal MethodInfo ShareEvent { get; }
     private readonly Type playType,infoType;
     private readonly MethodInfo query,download,sendChange,reload;
-    private readonly PropertyInfo roomInfo,chartMeta,songMeta,showList,chartSong;
+    private readonly PropertyInfo roomInfo,chartMeta,songMeta,showList,chartSong,shareResponse;
     internal RoomGameApi()
     {
         var framework=typeof(PlayModeType).Assembly;var game=typeof(SceneRoom).Assembly;
@@ -35,8 +39,19 @@ internal sealed class RoomGameApi
         chartMeta=chartType.GetProperties(Any).Single(p=>p.PropertyType==typeof(ChartRecord));
         chartSong=chartType.GetProperties(Any).Single(p=>p.PropertyType==Plugin.Adapter.SongType && p.CanWrite);
         songMeta=Plugin.Adapter.SongType.GetProperties(Any).Single(p=>p.PropertyType==typeof(SongRecord));
-        ShareMoveNext=typeof(WidgetMPShare).GetNestedTypes(Any).Single(t=>t.Name.StartsWith("_HandleChartShare_d__",StringComparison.Ordinal)).GetMethod("MoveNext",Any)!;
+        // Supported 6.7 aliases. The TCP event is a delegate boundary; native
+        // builds can inline calls to HandleHostShare/HandleChartShare inside it.
+        ShareEvent=typeof(WidgetMPShare).GetMethod("rwy",Any,null,new[]{typeof(TCPResponseTag),typeof(ipa)},null)
+            ?? throw new NotSupportedException("Room share notification entry point changed.");
+        ShareReceive=typeof(WidgetMPShare).GetMethod("rxb",Any,null,new[]{typeof(SrvHostShare)},null)
+            ?? throw new NotSupportedException("Room chart-share entry point changed.");
+        shareResponse=typeof(ipa).GetProperty("zab",Any)
+            ?? throw new NotSupportedException("Room share response field changed.");
+        if(ShareReceive.ReturnType!=typeof(void)||ShareReceive.IsStatic||ShareEvent.ReturnType!=typeof(void)||ShareEvent.IsStatic
+            ||shareResponse.PropertyType!=typeof(Google.Protobuf.IMessage))
+            throw new NotSupportedException("Room chart-share entry point signature changed.");
     }
+    internal SrvHostShare? ReadShare(ipa request)=>(shareResponse.GetValue(request) as Il2CppObjectBase)?.TryCast<SrvHostShare>();
     private void RequireRecord(string name,Type type) { if(RecordType.GetProperty(name)?.PropertyType!=type)throw new NotSupportedException("Room download binding changed: "+name); }
     internal static object Get(object value,string name)=>value.GetType().GetProperty(name,Any)!.GetValue(value)!;
     internal static void Set(object value,string name,object? data)=>value.GetType().GetProperty(name,Any)!.SetValue(value,data);
@@ -88,6 +103,14 @@ internal sealed class RoomGameApi
     }
     internal ChartRecord Meta(object chart)=>(ChartRecord)chartMeta.GetValue(chart)!;
     internal string Hash(object chart)=>Meta(chart).Hash;
+    internal bool HasChart(string hash)
+    {
+#if BETTER_MALODYV_VERIFY
+        if(HasChartTest is not null)return HasChartTest(hash);
+#endif
+        return Plugin.Adapter.ManagerType.GetMethod("GetChartByHash")!
+            .Invoke(Singleton(Plugin.Adapter.ManagerType),new object[]{hash}) is not null;
+    }
     internal object Song(object chart)=>chartSong.GetValue(chart)!;
     internal object Reload(string path)
     {
@@ -169,10 +192,16 @@ internal sealed class RoomGameApi
     internal Action<SceneRoom,RoomInfo>? RefreshTest;
     internal Func<uint,string?>? ExistingTest;
     internal Func<object?>? SelectedTest;
+    internal Func<string,bool>? HasChartTest;
     internal Type QueryTaskType=>query.ReturnType;
     internal Type DownloadTaskType=>download.ReturnType;
     internal void SetTestInfo(SceneRoom room,RoomInfo info)=>roomInfo.SetValue(room,info);
     internal void SetTestSelected(object? chart)=>playType.GetMethod("set_Chart",Any)!.Invoke(Local,new[]{chart});
-    internal void ResetTests(){QueryTest=null;DownloadTest=null;ReloadTest=null;SelectTest=null;RefreshTest=null;ExistingTest=null;SelectedTest=null;}
+    internal void TestShareNotification(WidgetMPShare widget,SrvHostShare share)
+    {
+        var request=new ipa();shareResponse.SetValue(request,share.Cast<Google.Protobuf.IMessage>());
+        ShareEvent.Invoke(widget,new object[]{TCPResponseTag.SrvRoomHostShare,request});
+    }
+    internal void ResetTests(){QueryTest=null;DownloadTest=null;ReloadTest=null;SelectTest=null;RefreshTest=null;ExistingTest=null;SelectedTest=null;HasChartTest=null;}
 #endif
 }

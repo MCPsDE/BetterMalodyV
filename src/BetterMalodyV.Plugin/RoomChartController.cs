@@ -5,6 +5,9 @@ using HarmonyLib;
 using BetterMalodyV.Shared;
 using Malody.DB;
 using Malody.Scene;
+using Malody.Scene.MP;
+using Malody.Network;
+using Malody.Network.Telepathy;
 using UnityEngine;
 using UnityEngine.UI;
 using UnityEngine.Events;
@@ -29,11 +32,20 @@ public sealed class RoomChartController : MonoBehaviour
     private float nextScan;
     private float nextQuery;
     private bool busy,needsUpdate;
+    private string shareScope="";
+    private readonly HashSet<string> acceptedShares=new(StringComparer.Ordinal);
+    private readonly Queue<string> shareHistory=new();
+    private string activeShareChart="";
+    private SharedRequest? waitingShare;
+    private sealed record SharedRequest(SceneRoom Owner,RoomInfo Info,SrvHostShare Share,string Expected);
     [Il2CppInterop.Runtime.Attributes.HideFromIl2Cpp]
     internal void Initialize(Harmony harmony)
     {
-        Api=new RoomGameApi();Current=this;
-        harmony.Patch(Api.ShareMoveNext,prefix:new HarmonyMethod(typeof(RoomChartController),nameof(SharedBefore)));
+        Api=new RoomGameApi();
+        harmony.Patch(Api.ShareReceive,prefix:new HarmonyMethod(typeof(RoomChartController),nameof(SharedBefore)));
+        try {harmony.Patch(Api.ShareEvent,prefix:new HarmonyMethod(typeof(RoomChartController),nameof(SharedEventBefore)));}
+        catch {harmony.Unpatch(Api.ShareReceive,HarmonyPatchType.All,harmony.Id);throw;}
+        Current=this;
         Plugin.Current.LogRoom("Room chart update/share bindings installed.");
     }
     public void Update()
@@ -42,9 +54,10 @@ public sealed class RoomChartController : MonoBehaviour
         try
         {
             Advance();
+            StartWaitingShare();
             if(Time.unscaledTime<nextScan)return;nextScan=Time.unscaledTime+.3f;
             var active=UnityEngine.Object.FindObjectOfType<SceneRoom>();
-            if(!active || !active.gameObject.activeInHierarchy){room=null;key="";return;}
+            if(!active || !active.gameObject.activeInHierarchy){room=null;key="";ResetShares("");return;}
             room=active;var info=Api.Info(active);
             if(info is null || !active.panelSong)return;
             var next=info.Roomid+":"+info.Hostid+":"+info.ChartHash;
@@ -140,29 +153,64 @@ public sealed class RoomChartController : MonoBehaviour
         update.GetComponent<RectTransform>().sizeDelta=new Vector2(text.GetPreferredValues(text.text).x+32,44);
         ShowAction(update.gameObject.activeSelf);
     }
-    private static bool SharedBefore(object __instance)
+    private static bool SharedEventBefore(WidgetMPShare __instance,TCPResponseTag __0,ipa __1)
     {
+        if(__0!=TCPResponseTag.SrvRoomHostShare||Current is null)return true;
+        try
+        {
+            var share=Current.Api.ReadShare(__1);
+            return share is null||SharedBefore(__instance,share);
+        }
+        catch(Exception ex){Current.Fail(ex);return false;}
+    }
+    private static bool SharedBefore(WidgetMPShare __instance,SrvHostShare __0)
+    {
+        if(__0.Charthash=="skin")return true;
         var controller=Current;if(!controller || controller!.Api is null)return true;
         try
         {
-            var state=__instance.GetType().GetProperty("__1__state")!;
-            if(Convert.ToInt32(state.GetValue(__instance))!=-1)return true;
-            var data=(SrvHostShare)RoomGameApi.Get(__instance,"data");
-            var owner=UnityEngine.Object.FindObjectOfType<SceneRoom>();
+            var owner=controller.room;
+            if(!owner||owner!.mpShare!=__instance)owner=UnityEngine.Object.FindObjectOfType<SceneRoom>();
             if(!owner)return true;
-            var info=controller.Api.Info(owner);
-            if(controller.Api.IsHost(info) || info.Status!=0 || data.Charthash!=info.ChartHash || data.Charthash.Length!=32)return true;
-            if(!Uri.TryCreate(data.DownloadUrl,UriKind.Absolute,out var url) || url.Scheme!="https")return true;
-            controller.room=owner;controller.key=info.Roomid+":"+info.Hostid+":"+info.ChartHash;
-            if(controller.busy)return false;
-            controller.job?.Dispose();controller.job=null;controller.pending=null;
-            var local=controller.Api.Selected;
-            if(local is not null && controller.Api.Hash(local)==data.Charthash)return false;
-            state.SetValue(__instance,-2);
-            controller.Start(controller.Receive(owner,new RoomInfo(info),new SrvHostShare(data),controller.key));
-            return false;
+            if(owner!.mpShare!=__instance)return true;
+            return controller.AcceptShare(owner,__0);
         }
-        catch(Exception ex) { controller.Fail(ex);return true; }
+        catch(Exception ex) { controller.Fail(ex);return false; }
+    }
+    private bool AcceptShare(SceneRoom owner,SrvHostShare data)
+    {
+        var info=Api.Info(owner);
+        if(Api.IsHost(info))return true;
+        // Ignore delayed notifications for a previous selection/room instead
+        // of letting them add a second native download.
+        if(info.Status!=0||data.Charthash!=info.ChartHash||data.Charthash.Length!=32)return false;
+        if(!Uri.TryCreate(data.DownloadUrl,UriKind.Absolute,out var url)||url.Scheme!="https")return false;
+        ResetShares(owner.GetInstanceID()+":"+info.Roomid+":"+info.Hostid);
+        var receipt=data.Charthash+":"+data.Session;
+        if(!acceptedShares.Add(receipt))return false;
+        shareHistory.Enqueue(receipt);
+        if(shareHistory.Count>256)acceptedShares.Remove(shareHistory.Dequeue());
+        room=owner;key=info.Roomid+":"+info.Hostid+":"+info.ChartHash;
+        if(activeShareChart==key)return false;
+        var local=Api.Selected;
+        if(local is not null&&Api.Hash(local)==data.Charthash)return false;
+        if(Api.HasChart(data.Charthash)){Api.Refresh(owner,info);return false;}
+        waitingShare=new(owner,new RoomInfo(info),new SrvHostShare(data),key);
+        StartWaitingShare();
+        return false;
+    }
+    private void ResetShares(string scope)
+    {
+        if(shareScope==scope)return;
+        shareScope=scope;acceptedShares.Clear();shareHistory.Clear();waitingShare=null;
+    }
+    private void StartWaitingShare()
+    {
+        if(job is not null||busy||waitingShare is null)return;
+        var request=waitingShare;waitingShare=null;
+        if(!Still(request.Owner,request.Info,request.Expected))return;
+        activeShareChart=request.Expected;
+        Start(Receive(request.Owner,request.Info,request.Share,request.Expected));
     }
     [Il2CppInterop.Runtime.Attributes.HideFromIl2Cpp]
     private IEnumerator<object?> Receive(SceneRoom owner,RoomInfo info,SrvHostShare share,string expected)
@@ -187,7 +235,7 @@ public sealed class RoomChartController : MonoBehaviour
         {
             operation?.Dispose();
             if(operation is not null && !committed) Api.Reload(operation.SongPath);
-            busy=false;SetLabel("下载更新","Update");
+            busy=false;activeShareChart="";SetLabel("下载更新","Update");
             try {File.Delete(path);}catch(IOException) { }
         }
     }
@@ -216,6 +264,12 @@ public sealed class RoomChartController : MonoBehaviour
     [Il2CppInterop.Runtime.Attributes.HideFromIl2Cpp]
     internal IEnumerator<object?> TestReceive(SceneRoom value,RoomInfo info,SrvHostShare share)=>Receive(value,info,share,key);
     internal bool TestNeedsUpdate=>needsUpdate;
+    internal bool TestHasJob=>job is not null;
+    internal object? TestPending=>pending;
+    internal void TestAdvance()=>Advance();
+    [Il2CppInterop.Runtime.Attributes.HideFromIl2Cpp]
+    internal void TestFail(Exception ex)=>Fail(ex);
+    internal void TestResetShares(){ResetShares("test-reset");activeShareChart="";waitingShare=null;}
     internal Button TestAction(SceneRoom owner){CreateButton(owner);ShowAction(true);return update!;}
 #endif
     [Il2CppInterop.Runtime.Attributes.HideFromIl2Cpp]
@@ -239,7 +293,7 @@ public sealed class RoomChartController : MonoBehaviour
     private void Fail(Exception ex)
     {
         try {job?.Dispose();}catch(Exception restore){Plugin.Current.LogRoom("Room rollback failed: "+restore.Message);}
-        job=null;pending=null;busy=false;checkedKey=key;
+        job=null;pending=null;busy=false;activeShareChart="";checkedKey=key;
         SetLabel("重试更新","Retry update");Plugin.Current.LogRoom("Room chart operation failed: "+ex.GetBaseException().Message);
         try{if(room)Api.ShowFailure();}catch(Exception message){Plugin.Current.LogRoom("Room error notification failed: "+message.Message);}
     }

@@ -361,7 +361,8 @@ public sealed class RuntimeVerification : MonoBehaviour
         var completed=Activator.CreateInstance(method.ReturnType,new[]{pack})!;
         var awaitable=new NativePending(completed);
         Check(awaitable.Poll() && awaitable.Result is not null,"Actual native UniTask completion/results consumed without blocking");
-        Check(api.ShareMoveNext.DeclaringType!.Name.StartsWith("_HandleChartShare_d__"),"Share hook targets chart receiver only, excluding skin sharing");
+        Check(api.ShareReceive.DeclaringType==typeof(Malody.Scene.MP.WidgetMPShare)&&api.ShareReceive.Name=="rxb"&&api.ShareEvent.Name=="rwy",
+            "Share hook intercepts the native TCP notification before async/download enqueue, excluding skins");
         Check(Directory.GetParent(api.ChartRoot)!.FullName==BepInEx.Paths.GameRootPath.TrimEnd('\\'),"Room import destination is isolated game chart directory");
     }
     [Il2CppInterop.Runtime.Attributes.HideFromIl2Cpp]

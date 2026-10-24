@@ -5,12 +5,16 @@ using System.Text;
 using BetterMalodyV.Plugin;
 using Malody.DB;
 using Malody.Scene;
+using Malody.Scene.MP;
 using UnityEngine;
+using HarmonyLib;
 
 namespace BetterMalodyV.Plugin;
 
 internal static class RoomRuntimeTests
 {
+    private static int nativeDownloads;
+    private static bool BlockNativeDownload(){nativeDownloads++;return false;}
     internal static void Run(Action<bool,string> check)
     {
         var controller=RoomChartController.Current!;var api=controller.Api;
@@ -90,6 +94,89 @@ internal static class RoomRuntimeTests
             RoomChartController.DownloadFileTest=(_,path)=>{File.Copy(zipPath,path,true);api.SetTestInfo(room,new RoomInfo(info){ChartHash=new string('b',32)});return Task.CompletedTask;};
             Pump(controller.TestReceive(room,new RoomInfo(info),share));
             check(File.ReadAllText(target)=="old local chart","Changing room chart during download cancels overwrite");
+
+            // Exercise the actual patched native share entry, rather than only
+            // calling Receive directly (which cannot catch enqueue/reentry bugs).
+            var widget=root.AddComponent<WidgetMPShare>();room.mpShare=widget;widget.roomId=info.Roomid;
+            var guard=new Harmony("com.mcpsde.bettermalodyv.verify.share-enqueue");
+            nativeDownloads=0;
+            foreach(var method in api.OnlineType.GetMethods().Where(method=>method.Name=="DownloadAndImport"))
+                guard.Patch(method,prefix:new HarmonyMethod(typeof(RoomRuntimeTests),nameof(BlockNativeDownload)));
+            try
+            {
+                // Feed an actual native RequestItem to the subscribed TCP event,
+                // including its native IMessage-to-SrvHostShare cast.
+                void Deliver(SrvHostShare message)=>api.TestShareNotification(widget,message);
+                void Drain()
+                {
+                    for(var step=0;controller.TestHasJob&&step<20;step++)
+                    {
+                        controller.TestAdvance();
+                        if(controller.TestPending is Task task)task.GetAwaiter().GetResult();
+                    }
+                    if(controller.TestHasJob)throw new Exception("Share job did not finish within the bounded fixture steps");
+                }
+                controller.TestContext(room,info);controller.TestResetShares();api.SelectedTest=()=>oldChart;
+                api.HasChartTest=_=>false;api.ReloadTest=_=>newSong;
+                var downloadCount=0;var refreshCount=0;
+                var releaseDownload=new TaskCompletionSource<bool>();
+                RoomChartController.DownloadFileTest=(_,path)=>
+                {
+                    downloadCount++;File.Copy(zipPath,path,true);return releaseDownload.Task;
+                };
+                api.RefreshTest=(_,_)=>
+                {
+                    refreshCount++;api.HasChartTest=chartHash=>chartHash==hash;
+                    Deliver(new SrvHostShare(share){Session=share.Session+20});
+                };
+                for(var repeat=0;repeat<100;repeat++)Deliver(new SrvHostShare(share));
+                check(controller.TestHasJob&&downloadCount==0,"Share is reserved at native entry before the first download frame");
+                controller.TestAdvance();
+                check(downloadCount==1,"A burst of 100 identical share notifications starts exactly one download");
+                for(var repeat=0;repeat<100;repeat++)
+                {
+                    Deliver(new SrvHostShare(share){DownloadUrl="https://fixture.invalid/renewed.zip"});
+                    Deliver(new SrvHostShare(share){Session=share.Session+1});
+                }
+                check(downloadCount==1&&controller.TestHasJob,"Repeated URLs and sessions cannot restart or cancel an active chart download");
+                releaseDownload.SetResult(true);Drain();
+                check(downloadCount==1&&refreshCount==1&&File.ReadAllBytes(target).SequenceEqual(content),
+                    "Import refresh reentry downloads/imports the shared chart only once");
+                for(var repeat=0;repeat<100;repeat++)Deliver(new SrvHostShare(share));
+                check(!controller.TestHasJob&&downloadCount==1,"Completed share sessions cannot reenter the download queue");
+                api.HasChartTest=chartHash=>chartHash==hash;
+                Deliver(new SrvHostShare(share){Session=share.Session+2});
+                check(!controller.TestHasJob&&downloadCount==1&&refreshCount==2,"An exact installed chart refreshes the stale selection without downloading again");
+                check(nativeDownloads==0,"Handled duplicate shares never enqueue a native download alongside the plugin");
+
+                // A failed session stays consumed; a deliberate new host share
+                // can retry without an automatic error/download storm.
+                controller.TestResetShares();api.HasChartTest=_=>false;
+                RoomChartController.DownloadFileTest=(_,_)=>{downloadCount++;return Task.FromException(new IOException("Simulated offline share"));};
+                Deliver(share);controller.TestAdvance();
+                try{controller.TestAdvance();throw new Exception("Expected failed share download");}
+                catch(IOException ex){controller.TestFail(ex);}
+                var failedCount=downloadCount;
+                for(var repeat=0;repeat<100;repeat++)Deliver(new SrvHostShare(share));
+                check(downloadCount==failedCount&&!controller.TestHasJob,"A failed session is not retried by duplicate share notifications");
+                Deliver(new SrvHostShare(share){Session=share.Session+3});
+                check(controller.TestHasJob,"A deliberate new host share session permits a retry after failure");
+                controller.TestFail(new IOException("End retry fixture"));
+                Deliver(new SrvHostShare(share){Session=share.Session+5});
+                check(controller.TestHasJob,"An aborted job before its first frame releases the active share reservation");
+                controller.TestFail(new IOException("End aborted-job fixture"));
+                controller.TestContext(room,new RoomInfo(info){ChartHash=new string('c',32)});
+                Deliver(new SrvHostShare(share){Session=share.Session+4});
+                check(!controller.TestHasJob&&nativeDownloads==0,"Delayed shares for an old chart neither download nor fall through to the native queue");
+                controller.TestContext(room,new RoomInfo(info){Hostid=998});
+                Deliver(share);
+                check(controller.TestHasJob,"Changing hosts resets consumed share sessions");
+                controller.TestFail(new IOException("End host-change fixture"));
+            }
+            finally
+            {
+                guard.UnpatchSelf();controller.TestResetShares();
+            }
         }
         finally
         {
