@@ -4,7 +4,6 @@ using HarmonyLib;
 using Malody.DB;
 using Malody.Play;
 using Malody.Scene;
-using Malody.Scene.Item;
 using Malody.Scene.Panel;
 using TMPro;
 using UnityEngine;
@@ -25,13 +24,15 @@ public sealed class ReplayRunController : MonoBehaviour
     private float nextAccountCheck;
     private float nextBaka;
     private string? failure;
-    private const string BakaLabelName="BetterMalodyV.BakaAccuracy";
     private static readonly Color BakaColor=new(.32f,.68f,1f,1f);
     private readonly Queue<BakaJob> bakaQueue=new();
     private readonly HashSet<string> queuedBaka=new(StringComparer.OrdinalIgnoreCase);
     private readonly Dictionary<string,(double Accuracy,bool TurboTail)?> bakaCache=new(StringComparer.OrdinalIgnoreCase);
-    private readonly Dictionary<int,string> itemBakaPaths=new();
-    private sealed record BakaJob(ItemScore Item,int InstanceId,string Path);
+    private readonly Dictionary<int,string> bakaTargetPaths=new();
+    private PanelResultScore? resultPanel;
+    private DateTime resultOpenedAtUtc;
+    private sealed record BakaJob(Text Label,int InstanceId,string Path);
+    private const BindingFlags Any=BindingFlags.Instance|BindingFlags.Static|BindingFlags.Public|BindingFlags.NonPublic;
     private sealed class Run(object info,ReplayFile replay,ReplayFile inputs,uint user)
     {
         internal readonly object Info=info;
@@ -56,7 +57,7 @@ public sealed class ReplayRunController : MonoBehaviour
         try
         {
             Patch(typeof(PanelScoreDetail).GetMethod("Show",new[]{typeof(ScoreRecord)})!,nameof(LocalShown),true);
-            Patch(typeof(ItemScore).GetMethod("Fill")!,nameof(ScoreFilled),true);
+            Patch(typeof(PanelResultScore).GetMethods(Any).Single(method=>method.Name=="Fill"&&method.GetParameters().Length==2),nameof(ResultFilled),true);
             Patch(typeof(ChartPlayer).GetMethod("Load")!,nameof(Loading));
             Patch(Api.InputTick,nameof(TickBefore));Patch(Api.InputReset,nameof(ResetAfter),true);Patch(Api.ResetRandom,nameof(RandomAfter),true);
             foreach(var method in Api.PhysicalInputs)Patch(method,nameof(PhysicalBefore));
@@ -82,53 +83,55 @@ public sealed class ReplayRunController : MonoBehaviour
             else if(run.SeenPlay || Time.unscaledTime-run.Started>45)run=null;
         }
         ProcessBakaQueue();
+        ScanResultReplay();
         if(Time.unscaledTime<nextScan)return;nextScan=Time.unscaledTime+.5f;
-        foreach(var item in UnityEngine.Object.FindObjectsOfType<ItemScore>())
-            try
-            {
-                var data=AssignedData(item);
-                if(data is ScoreRecord)QueueBaka(item,data);
-            }
-            catch(Exception ex) { Plugin.Current.LogRoom("Replay Baka list scan skipped: "+ex.GetBaseException().Message); }
         foreach(var panel in UnityEngine.Object.FindObjectsOfType<PanelScoreDetail>())
             try {Attach(panel);}catch(Exception ex){Plugin.Current.LogRoom("Replay action unavailable: "+ex.GetBaseException().Message);}
     }
     private static void LocalShown(PanelScoreDetail __instance)
     {try {Current?.Attach(__instance);}catch(Exception ex){Plugin.Current.LogRoom("Replay action: "+ex.GetBaseException().Message);}}
 
-    private static void ScoreFilled(ItemScore __instance,object? __1)
+    private static void ResultFilled(PanelResultScore __instance,object? __0,object? __1)
     {
-        try {Current?.QueueBaka(__instance,__1);}
-        catch(Exception ex) {Plugin.Current.LogRoom("Replay Baka label unavailable: "+ex.GetBaseException().Message);}
+        if(Current is not null)
+        {
+            Current.resultPanel=__instance;
+            Current.resultOpenedAtUtc=DateTime.UtcNow;
+            Current.bakaTargetPaths.Remove(__instance.GetInstanceID());
+        }
     }
 
-    private static object? AssignedData(ItemScore item)
+    private void ScanResultReplay()
     {
-        for(var type=item.GetType();type is not null;type=type.BaseType)
+        var panel=resultPanel;
+        if(panel is null||!panel)return;
+        var source=panel.acc?.GetComponent<Text>();
+        if(source is null)return;
+        var existing=source.transform.parent.Find("BetterMalodyV.BakaResult")?.GetComponent<Text>();
+        if(existing is not null&&bakaTargetPaths.ContainsKey(existing.GetInstanceID()))return;
+        try
         {
-            var property=type.GetProperty("AssignObject",BindingFlags.Instance|BindingFlags.Public|BindingFlags.NonPublic);
-            if(property is not null)return property.GetValue(item);
-            var getter=type.GetMethod("get_AssignObject",BindingFlags.Instance|BindingFlags.Public|BindingFlags.NonPublic);
-            if(getter is not null)return getter.Invoke(item,null);
+            var probe=Api.ReplayArchivePath(".bettermalodyv-probe.mrv");
+            var directory=Path.GetDirectoryName(probe);
+            if(string.IsNullOrWhiteSpace(directory)||!Directory.Exists(directory))return;
+            var latest=Directory.EnumerateFiles(directory,"*.mrv")
+                .Select(path=>new FileInfo(path))
+                .Where(file=>file.LastWriteTimeUtc>=resultOpenedAtUtc.AddSeconds(-1))
+                .OrderByDescending(file=>file.LastWriteTimeUtc)
+                .FirstOrDefault();
+            if(latest is not null)QueueBaka(source,latest.FullName,"BetterMalodyV.BakaResult");
         }
-        return null;
+        catch(Exception ex){Plugin.Current.LogRoom("Result Baka scan skipped: "+ex.GetBaseException().Message);}
     }
 
     [Il2CppInterop.Runtime.Attributes.HideFromIl2Cpp]
-    private void QueueBaka(ItemScore item,object? data)
+    private void QueueBaka(Text source,string path,string labelName)
     {
-        var label=EnsureBakaLabel(item);
-        if(!item || label is null)return;
-        var instanceId=item.GetInstanceID();
-        if(data is not ScoreRecord record || string.IsNullOrWhiteSpace(record.ReplayFile))
-        {
-            itemBakaPaths.Remove(instanceId);label.gameObject.SetActive(false);return;
-        }
-        var path=Api.ReplayArchivePath(record.ReplayFile);
-        itemBakaPaths[instanceId]=path;label.gameObject.SetActive(true);label.color=BakaColor;
+        var label=EnsureBakaLabel(source,labelName);if(label is null)return;
+        var instanceId=label.GetInstanceID();bakaTargetPaths[instanceId]=path;label.gameObject.SetActive(true);label.color=BakaColor;
         if(bakaCache.TryGetValue(path,out var cached)){ApplyBaka(label,cached);return;}
         label.text="…";
-        if(queuedBaka.Add(path))bakaQueue.Enqueue(new(item,instanceId,path));
+        if(queuedBaka.Add(path))bakaQueue.Enqueue(new(label,instanceId,path));
     }
 
     [Il2CppInterop.Runtime.Attributes.HideFromIl2Cpp]
@@ -141,9 +144,9 @@ public sealed class ReplayRunController : MonoBehaviour
         try {result=AnalysisApi.AnalyzeBaka(job.Path);}
         catch(Exception ex){Plugin.Current.LogRoom("Replay Baka analysis skipped: "+ex.GetBaseException().Message);}
         bakaCache[job.Path]=result;
-        if(!itemBakaPaths.TryGetValue(job.InstanceId,out var current)
+        if(!bakaTargetPaths.TryGetValue(job.InstanceId,out var current)
             || !string.Equals(current,job.Path,StringComparison.OrdinalIgnoreCase))return;
-        var label=EnsureBakaLabel(job.Item);if(label is not null)ApplyBaka(label,result);
+        if(job.Label)ApplyBaka(job.Label,result);
     }
 
     private static void ApplyBaka(Text label,(double Accuracy,bool TurboTail)? result)
@@ -153,12 +156,12 @@ public sealed class ReplayRunController : MonoBehaviour
         label.color=BakaColor;
     }
 
-    private static Text? EnsureBakaLabel(ItemScore item)
+    private static Text? EnsureBakaLabel(Text source,string labelName)
     {
-        if(!item || !item.acc)return null;
-        var existing=item.acc.transform.parent.Find(BakaLabelName)?.GetComponent<Text>();
+        if(!source)return null;
+        var existing=source.transform.parent.Find(labelName)?.GetComponent<Text>();
         if(existing is not null)return existing;
-        var source=item.acc;var go=new GameObject(BakaLabelName);go.layer=source.gameObject.layer;
+        var go=new GameObject(labelName);go.layer=source.gameObject.layer;
         var label=go.AddComponent<Text>();label.font=source.font;label.fontSize=source.fontSize;label.fontStyle=source.fontStyle;
         label.alignment=TextAnchor.MiddleRight;label.horizontalOverflow=HorizontalWrapMode.Overflow;
         label.verticalOverflow=VerticalWrapMode.Truncate;label.raycastTarget=false;label.supportRichText=source.supportRichText;
@@ -167,13 +170,18 @@ public sealed class ReplayRunController : MonoBehaviour
         var rect=go.GetComponent<RectTransform>();rect.SetParent(source.transform.parent,false);
         var sourceRect=source.rectTransform;rect.anchorMin=sourceRect.anchorMin;rect.anchorMax=sourceRect.anchorMax;
         rect.pivot=new Vector2(1,sourceRect.pivot.y);rect.sizeDelta=new Vector2(Math.Max(88,sourceRect.sizeDelta.x*.58f),sourceRect.sizeDelta.y);
-        rect.anchoredPosition=sourceRect.anchoredPosition+new Vector2(-8,0);label.gameObject.SetActive(false);return label;
+        rect.anchoredPosition=sourceRect.anchoredPosition+new Vector2(sourceRect.sizeDelta.x/2+8,0);label.gameObject.SetActive(false);return label;
     }
     [Il2CppInterop.Runtime.Attributes.HideFromIl2Cpp]
     internal Button? Attach(PanelScoreDetail panel)
     {
         const string name="BetterMalodyV.ReplayRun";
         var path=Api.LocalPath(panel);
+        if(!string.IsNullOrEmpty(path))
+        {
+            var accSource=panel.textAcc?.GetComponent<Text>();
+            if(accSource is not null)QueueBaka(accSource,path,"BetterMalodyV.BakaDetail");
+        }
         if(string.IsNullOrEmpty(path) || !panel.areaRep.activeSelf)return null;
         var existing=panel.areaRep.transform.Find(name);
         var analysisExisting=panel.areaRep.transform.Find("BetterMalodyV.ReplayAnalysis");
