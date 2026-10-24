@@ -18,6 +18,7 @@ internal static class ReplayAnalysisView
     private static readonly Color BorderColor = Hex("2b2f39");
     private static readonly Color CyanColor = Hex("35cfff");
     private static readonly Color PinkColor = Hex("ff4f8b");
+    private static readonly Color MissColor = Hex("f05d6d");
 
     private static GameObject? root;
     private static TMP_Text? textTemplate;
@@ -26,11 +27,14 @@ internal static class ReplayAnalysisView
     private static RectTransform? viewport;
     private static readonly List<RectTransform> pages = new();
     private static readonly List<Button> tabs = new();
+    private static readonly List<PendingPlot> pendingPlots = new();
+    private static readonly List<Texture2D> plotTextures = new();
 
     internal static bool IsOpen => root;
 #if BETTER_MALODYV_VERIFY
     internal static Camera? TestCamera;
     internal static GameObject? TestRoot => root;
+    internal static IReadOnlyList<ReplayPlotDefinition> TestPlots => pendingPlots.Select(plot => plot.Definition).ToArray();
 #endif
 
     internal static void Open(TMP_Text source, ReplayAnalysisSession session)
@@ -78,6 +82,10 @@ internal static class ReplayAnalysisView
     internal static void Close()
     {
         if (root) UnityEngine.Object.Destroy(root);
+        foreach (var texture in plotTextures)
+            if (texture) UnityEngine.Object.Destroy(texture);
+        plotTextures.Clear();
+        pendingPlots.Clear();
         root = null;
         textTemplate = null;
         scroll = null;
@@ -198,7 +206,7 @@ internal static class ReplayAnalysisView
             (Text("标准差", "Std. deviation"), Ms(analysis.Offsets.StandardDeviation)),
             (Text("命中数", "Matched hits"), analysis.Offsets.Count.ToString("N0"))
         });
-        AddHistogramSection(page, Text("整体误差分布", "Overall offset distribution"), analysis.OffsetDistribution, true);
+        AddHistogramSection(page, Text("整体误差分布", "Overall offset distribution"), analysis.OffsetDistribution, true, "OverallOffset");
 
         AddSection(page, Text("原始判定", "Recorded judgements"));
         AddStatGrid(page, new[]
@@ -236,7 +244,8 @@ internal static class ReplayAnalysisView
                 (Text("匹配音符", "Matched"), track.Offsets.Count.ToString("N0")),
                 (Text("谱面音符", "Chart notes"), track.NoteCount.ToString("N0"))
             }, 3, 200, 58);
-            AddCompactHistogram(layout.transform, Text("轨道误差分布", "Track offset distribution"), track.OffsetDistribution, true);
+            AddCompactHistogram(layout.transform, Text("轨道误差分布", "Track offset distribution"), track.OffsetDistribution, true,
+                "TrackOffset-" + track.Lane);
         }
     }
 
@@ -252,8 +261,8 @@ internal static class ReplayAnalysisView
             (Text("未抬起", "Still held"), analysis.Presses.UnmatchedDownCount.ToString("N0")),
             (Text("无对应按下的抬起", "Unmatched releases"), analysis.Presses.UnmatchedUpCount.ToString("N0"))
         });
-        AddHistogramSection(page, Text("按压时长分布", "Press duration distribution"), analysis.Presses.DurationDistribution, false);
-        AddHistogramSection(page, Text("同轨按压间隔", "Interval between presses"), analysis.Presses.IntervalDistribution, false);
+        AddHistogramSection(page, Text("按压时长分布", "Press duration distribution"), analysis.Presses.DurationDistribution, false, "PressDuration");
+        AddHistogramSection(page, Text("同轨按压间隔", "Interval between presses"), analysis.Presses.IntervalDistribution, false, "PressInterval");
 
         AddSection(page, Text("逐轨按压", "Presses by track"));
         var columns = Screen.width < 1500 ? 1 : 2;
@@ -270,8 +279,10 @@ internal static class ReplayAnalysisView
                 (Text("未抬起", "Still held"), track.Presses.UnmatchedDownCount.ToString("N0")),
                 (Text("未配对抬起", "Unmatched up"), track.Presses.UnmatchedUpCount.ToString("N0"))
             }, 2, 210, 58);
-            AddCompactHistogram(layout.transform, Text("按压时长", "Duration"), track.Presses.DurationDistribution, false);
-            AddCompactHistogram(layout.transform, Text("按压间隔", "Interval"), track.Presses.IntervalDistribution, false);
+            AddCompactHistogram(layout.transform, Text("按压时长", "Duration"), track.Presses.DurationDistribution, false,
+                "TrackDuration-" + track.Lane);
+            AddCompactHistogram(layout.transform, Text("按压间隔", "Interval"), track.Presses.IntervalDistribution, false,
+                "TrackInterval-" + track.Lane);
         }
     }
 
@@ -292,7 +303,7 @@ internal static class ReplayAnalysisView
         {
             AddSection(page, group.Key);
             var columns = Screen.width < 1500 ? 1 : 2;
-            var grid = Grid(page.transform, columns, columns == 1 ? 1400 : 680, 176, 12);
+            var grid = Grid(page.transform, columns, columns == 1 ? 1400 : 680, 334, 12);
             foreach (var profile in group)
             {
                 var card = Panel(grid.transform, profile.Label, SurfaceColor);
@@ -306,7 +317,7 @@ internal static class ReplayAnalysisView
                     Text("漏判", "Misses") + " " + profile.Misses.ToString("N0"),
                     Text("平均偏移", "Mean error") + " " + Signed(profile.MeanError)
                 }), 12, FontStyles.Normal, MutedColor, 24, true);
-                AddTimeline(layout.transform, profile, 62);
+                AddTimeline(layout.transform, profile, 220);
             }
         }
         if (session.Analysis.Profiles.Count == 0)
@@ -354,6 +365,7 @@ internal static class ReplayAnalysisView
         if (scroll) scroll!.content = pages[index];
         if (scroll) scroll!.verticalNormalizedPosition = 1;
         Canvas.ForceUpdateCanvases();
+        RenderPendingPlots(pages[index]);
     }
 
     private static void AddSection(Transform parent, string title)
@@ -377,20 +389,20 @@ internal static class ReplayAnalysisView
         }
     }
 
-    private static void AddHistogramSection(Transform parent, string title, ReplayHistogram histogram, bool signed)
+    private static void AddHistogramSection(Transform parent, string title, ReplayHistogram histogram, bool signed, string plotId)
     {
         var block = Block(parent, title, 14, 14, 14, 14, 7);
         AddText(block.transform, title, 16, FontStyles.Bold, InkColor, 25);
-        AddHistogram(block.transform, histogram, signed, 148);
+        AddHistogram(block.transform, histogram, signed, 148, plotId);
     }
 
-    private static void AddCompactHistogram(Transform parent, string title, ReplayHistogram histogram, bool signed)
+    private static void AddCompactHistogram(Transform parent, string title, ReplayHistogram histogram, bool signed, string plotId)
     {
         AddText(parent, title, 13, FontStyles.Normal, MutedColor, 20);
-        AddHistogram(parent, histogram, signed, 72);
+        AddHistogram(parent, histogram, signed, 72, plotId);
     }
 
-    private static void AddHistogram(Transform parent, ReplayHistogram histogram, bool signed, float height)
+    private static void AddHistogram(Transform parent, ReplayHistogram histogram, bool signed, float height, string plotId)
     {
         var graph = NewRect("Histogram", parent);
         graph.AddComponent<Image>();
@@ -413,34 +425,13 @@ internal static class ReplayAnalysisView
         var axisStart = histogram.Bins[0].Start;
         var axisEnd = binEnds[^1];
         var axisSpan = axisEnd - axisStart;
-        var baseline = signed ? .5f : .06f;
-        var rule = Image(graph.transform, "Baseline", BorderColor);
-        var ruleRect = rule.rectTransform;
-        ruleRect.anchorMin = new Vector2(0, baseline);
-        ruleRect.anchorMax = new Vector2(1, baseline);
-        ruleRect.pivot = new Vector2(.5f, .5f);
-        ruleRect.sizeDelta = new Vector2(-16, 1);
-        ruleRect.anchoredPosition = Vector2.zero;
-
-        for (var index = 0; index < histogram.Bins.Count; index++)
-        {
-            var bin = histogram.Bins[index];
-            if (bin.Count <= 0 || maxDensity <= 0 || axisSpan <= 0) continue;
-            var x0 = (float)((bin.Start - axisStart) / axisSpan);
-            var x1 = (float)((binEnds[index] - axisStart) / axisSpan);
-            var negative = signed && (bin.Start + binEnds[index]) / 2 < 0;
-            var bar = Image(graph.transform, "Bin " + index, signed ? negative ? PinkColor : CyanColor : CyanColor);
-            var barRect = bar.rectTransform;
-            barRect.anchorMin = new Vector2(x0, baseline);
-            barRect.anchorMax = new Vector2(x1, baseline);
-            barRect.pivot = new Vector2(.5f, negative ? 1 : 0);
-            var maxHeight = signed ? height * .39f : height * .78f;
-            barRect.sizeDelta = new Vector2(-3, Math.Max(2, maxHeight * (float)(densities[index] / maxDensity)));
-            barRect.anchoredPosition = Vector2.zero;
-            var color = bar.color;
-            color.a = .86f;
-            bar.color = color;
-        }
+        var plotPoints = histogram.Bins.Select((bin, index) => new ReplayPlotPoint(
+            (bin.Start + binEnds[index]) / 2,
+            maxDensity > 0 ? densities[index] / maxDensity : 0,
+            signed && (bin.Start + binEnds[index]) / 2 < 0)).ToArray();
+        QueuePlot(graph.transform, graph.GetComponent<RectTransform>(), plotId, plotPoints, axisStart, axisEnd,
+            true, signed, CyanColor, PinkColor, MissColor, BorderColor, Hex("566171"));
+        AddPercentLabels(graph.transform, height, height >= 128);
 
         AddHistogramAxis(parent, histogram, signed, axisStart, axisEnd);
     }
@@ -502,10 +493,56 @@ internal static class ReplayAnalysisView
 
     private static void AddAxisLabel(Transform parent, string label, float x, float width, TextAlignmentOptions alignment)
     {
+        var offset = ReplayPlotTexture.PlotLeft * (1 - x) - ReplayPlotTexture.PlotRight * x;
         var text = AddAnchoredText(parent, label, 10, FontStyles.Normal, SubtleColor,
-            Vector2.zero, new Vector2(x, 1), new Vector2(x, 1), new Vector2(width, 18));
+            new Vector2(offset, 0), new Vector2(x, 1), new Vector2(x, 1), new Vector2(width, 18));
         text.rectTransform.pivot = new Vector2(x <= 0 ? 0 : x >= 1 ? 1 : .5f, 1);
         text.alignment = alignment;
+    }
+
+    private static void QueuePlot(Transform parent, RectTransform container, string id,
+        IReadOnlyList<ReplayPlotPoint> points, double minimumX, double maximumX, bool connectPoints,
+        bool signed, Color positive, Color early, Color miss, Color grid, Color line)
+    {
+        var textureObject = NewRect("PlotTexture", parent);
+        Stretch(textureObject.GetComponent<RectTransform>());
+        var image = textureObject.AddComponent<RawImage>();
+        image.color = Color.white;
+        image.raycastTarget = false;
+        pendingPlots.Add(new(container, image,
+            new ReplayPlotDefinition(id, points.ToArray(), minimumX, maximumX, connectPoints, signed),
+            positive, early, miss, grid, line));
+    }
+
+    private static void RenderPendingPlots(RectTransform page)
+    {
+        foreach (var plot in pendingPlots)
+        {
+            if (plot.Rendered || !plot.Container || !plot.Container.IsChildOf(page)) continue;
+            var width = Mathf.RoundToInt(plot.Container.rect.width);
+            var height = Mathf.RoundToInt(plot.Container.rect.height);
+            if (width <= 0 || height <= 0) continue;
+            var texture = ReplayPlotTexture.Create(width, height, plot.Definition.Points,
+                plot.Definition.MinimumX, plot.Definition.MaximumX, plot.Definition.ConnectPoints,
+                plot.Positive, plot.Early, plot.Miss, plot.Grid, plot.Line);
+            plot.Image.texture = texture;
+            plot.Image.SetAllDirty();
+            plotTextures.Add(texture);
+            plot.Rendered = true;
+        }
+    }
+
+    private static void AddPercentLabels(Transform parent, float height, bool allTicks)
+    {
+        var steps = allTicks ? new[] { 0, 1, 2, 3, 4 } : new[] { 0, 4 };
+        var plotHeight = height - ReplayPlotTexture.PlotTop - ReplayPlotTexture.PlotBottom;
+        foreach (var step in steps)
+        {
+            var y = ReplayPlotTexture.PlotTop + plotHeight * step / 4;
+            var text = AddAnchoredText(parent, $"{100 - step * 25}%", 10, FontStyles.Normal, SubtleColor,
+                new Vector2(2, -(y - 6)), Vector2.up, Vector2.up, new Vector2(36, 12));
+            text.alignment = TextAlignmentOptions.Right;
+        }
     }
 
     private static void AddTimeline(Transform parent, ReplayProfileScore profile, float height)
@@ -518,39 +555,22 @@ internal static class ReplayAnalysisView
         var element = graph.AddComponent<LayoutElement>();
         element.preferredHeight = height;
         element.minHeight = height;
-        var span = profile.ChartEndMs - profile.ChartStartMs;
-        for (var index = 0; index < profile.Points.Count; index++)
-        {
-            var point = profile.Points[index];
-            var bar = Image(graph.transform, "Point " + index, CyanColor);
-            var barRect = bar.rectTransform;
-            var x0 = span <= 0 ? .5f - 1f / 128 : Mathf.Clamp01((float)((point.StartTimeMs - profile.ChartStartMs) / span));
-            var x1 = span <= 0 ? .5f + 1f / 128 : Mathf.Clamp01((float)((point.EndTimeMs - profile.ChartStartMs) / span));
-            var value = Mathf.Clamp01((float)point.Accuracy);
-            barRect.anchorMin = new Vector2(x0, 0);
-            barRect.anchorMax = new Vector2(x1, 0);
-            barRect.pivot = new Vector2(.5f, 0);
-            barRect.sizeDelta = new Vector2(-2, Math.Max(1, (height - 8) * value));
-            barRect.anchoredPosition = new Vector2(0, 4);
-            var color = bar.color;
-            color.a = .9f;
-            bar.color = color;
-        }
+        var maxTime = profile.Points.Count == 0 ? 1 : Math.Max(1, profile.Points[^1].TimeMs);
+        var points = profile.Points.Select(point => new ReplayPlotPoint(
+            point.TimeMs, point.Accuracy, IsMiss: point.Accuracy == 0)).ToArray();
+        var profileColor = profile.Label.StartsWith("Baka", StringComparison.Ordinal) ? PinkColor : CyanColor;
+        QueuePlot(graph.transform, graph.GetComponent<RectTransform>(), "CVT:" + profile.Label,
+            points, 0, maxTime, false, false, profileColor, profileColor, MissColor, BorderColor, profileColor);
+        AddPercentLabels(graph.transform, height, true);
+
         var axis = Horizontal(parent, 0, 0, 0, 0, 0);
         axis.GetComponent<LayoutElement>().preferredHeight = 18;
-        AddText(axis.transform, "0:00", 10, FontStyles.Normal, SubtleColor, 16, false, 1);
-        var middle = AddText(axis.transform, Text("逐音符准确率 · 用时", "Per-note accuracy · elapsed time"), 10,
+        AddText(axis.transform, Text("开局", "Start"), 10, FontStyles.Normal, SubtleColor, 16, false, 1);
+        var middle = AddText(axis.transform, Text("单键 ACC · 时间 →", "Per-note ACC · time →"), 10,
             FontStyles.Normal, SubtleColor, 16, false, 1);
         middle.alignment = TextAlignmentOptions.Center;
-        var end = AddText(axis.transform, TimelineTime(span), 10, FontStyles.Normal, SubtleColor, 16, false, 1);
+        var end = AddText(axis.transform, Text("结束", "End"), 10, FontStyles.Normal, SubtleColor, 16, false, 1);
         end.alignment = TextAlignmentOptions.Right;
-    }
-
-    private static string TimelineTime(double milliseconds)
-    {
-        if (!double.IsFinite(milliseconds) || milliseconds <= 0) return "0:00";
-        var totalSeconds = (long)Math.Floor(milliseconds / 1000);
-        return $"{totalSeconds / 60}:{totalSeconds % 60:00}";
     }
 
     private static void AddWarnings(Transform parent, IReadOnlyList<string> warnings)
@@ -752,5 +772,31 @@ internal static class ReplayAnalysisView
     {
         ColorUtility.TryParseHtmlString("#" + value, out var color);
         return color;
+    }
+
+    private sealed class PendingPlot
+    {
+        internal PendingPlot(RectTransform container, RawImage image, ReplayPlotDefinition definition,
+            Color positive, Color early, Color miss, Color grid, Color line)
+        {
+            Container = container;
+            Image = image;
+            Definition = definition;
+            Positive = positive;
+            Early = early;
+            Miss = miss;
+            Grid = grid;
+            Line = line;
+        }
+
+        internal RectTransform Container { get; }
+        internal RawImage Image { get; }
+        internal ReplayPlotDefinition Definition { get; }
+        internal Color Positive { get; }
+        internal Color Early { get; }
+        internal Color Miss { get; }
+        internal Color Grid { get; }
+        internal Color Line { get; }
+        internal bool Rendered { get; set; }
     }
 }

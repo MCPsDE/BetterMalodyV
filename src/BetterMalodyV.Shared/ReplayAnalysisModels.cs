@@ -44,7 +44,7 @@ public sealed record ReplayTrackAnalysis(
     ReplayHistogram OffsetDistribution,
     ReplayPressStats Presses);
 
-public sealed record ReplayProfilePoint(double StartTimeMs, double EndTimeMs, double Accuracy, int SampleCount);
+public sealed record ReplayProfilePoint(double TimeMs, double Accuracy);
 
 public sealed record ReplayProfileScore(
     string Group,
@@ -54,8 +54,6 @@ public sealed record ReplayProfileScore(
     int Misses,
     double MeanError,
     string WindowLabel,
-    double ChartStartMs,
-    double ChartEndMs,
     IReadOnlyList<ReplayProfilePoint> Points);
 
 public sealed record ReplayAnalysisResult(

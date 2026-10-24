@@ -33,7 +33,7 @@ internal static class ReplayAnalysisTests
         Check(calibrated.Judgements.Best == 12 && calibrated.Judgements.Total == 12, "Counts native judgement flags");
         Check(calibrated.Profiles.Count == 21, "Provides the default CVT profile set");
         Check(calibrated.Profiles.Any(profile => profile.Label == "Malody/E"), "Includes strict Malody profile");
-        Check(calibrated.Profiles.All(profile => profile.Points.Sum(point => point.SampleCount) == profile.Objects), "CVT timeline preserves every scored object");
+        Check(calibrated.Profiles.All(profile => profile.Points.Count == profile.Objects), "CVT scatter preserves every scored object as one point");
         Check(calibrated.OffsetDistribution.Bins.Sum(bin => bin.Count) == calibrated.MatchedCount, "Offset histogram accounts for every matched hit");
 
         var small = ReplayAnalysisEngine.Analyze(
@@ -77,11 +77,8 @@ internal static class ReplayAnalysisTests
             Array.Empty<ReplayHitEvent>(),
             1);
         var sparseTimeline = sparse.Profiles.Single(profile => profile.Label == "baka");
-        Check(sparseTimeline.Points.Count == 2 && sparseTimeline.Points.Sum(point => point.SampleCount) == 3,
-            "CVT timeline omits empty time buckets without dropping notes");
-        Check(sparseTimeline.Points[0].EndTimeMs < sparseTimeline.Points[1].StartTimeMs
-            && sparseTimeline.ChartStartMs == 0 && sparseTimeline.ChartEndMs == 10000,
-            "CVT points retain actual chart time gaps");
+        Check(sparseTimeline.Points.Count == 3 && sparseTimeline.Points.Select(point => point.TimeMs).SequenceEqual(new[] { 0d, 10d, 10000d }),
+            "CVT scatter preserves each object's timestamp across sparse chart sections");
 
         return checks;
     }

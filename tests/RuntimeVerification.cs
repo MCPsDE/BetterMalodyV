@@ -152,22 +152,29 @@ public sealed class RuntimeVerification : MonoBehaviour
                         Check(labels.Any(label=>label.text=="500+ ms") && labels.Any(label=>label.text=="1000+ ms"),"Press charts label their overflow ranges");
                         var histograms=page.GetComponentsInChildren<RectTransform>(true).Where(rect=>rect.name=="Histogram" && rect.gameObject.activeInHierarchy).ToArray();
                         Check(histograms.Length>=2,"Duration and interval histograms are rendered");
-                        var durationBin=histograms[0].GetComponentsInChildren<RectTransform>(true).Single(rect=>rect.name=="Bin 3");
-                        Check(Math.Abs(durationBin.anchorMin.x-60f/700)<.001f && Math.Abs(durationBin.anchorMax.x-80f/700)<.001f,
-                            "Duration bars use the 60-80 ms chart coordinates");
-                        var intervalOverflow=histograms[1].GetComponentsInChildren<RectTransform>(true).Single(rect=>rect.name=="Bin 9");
-                        Check(Math.Abs(intervalOverflow.anchorMin.x-2f/3)<.001f && Math.Abs(intervalOverflow.anchorMax.x-1)<.001f,
-                            "Interval overflow is placed after the 1000 ms threshold");
+                        var durationPlot=ReplayAnalysisView.TestPlots.Single(plot=>plot.Id=="PressDuration");
+                        Check(durationPlot.Points.Count==10 && durationPlot.Points.Any(point=>Math.Abs(point.X-70)<.001)
+                            && durationPlot.MaximumX==700 && durationPlot.ConnectPoints,
+                            "Duration distribution uses a connected point plot at the 60-80 ms bin center");
+                        var intervalPlot=ReplayAnalysisView.TestPlots.Single(plot=>plot.Id=="PressInterval");
+                        Check(intervalPlot.Points.Any(point=>Math.Abs(point.X-1250)<.001) && intervalPlot.MaximumX==1500,
+                            "Interval overflow is drawn at its documented representative midpoint");
+                        Check(histograms.All(graph=>graph.GetComponentInChildren<RawImage>(true).texture),
+                            "Distribution plots render as native raster textures");
                     }
                     if(replayAnalysisCapture==3)
                     {
                         Check(labels.Any(label=>label.text.Contains("Baka-e")),"Judgement section includes CVT profile results");
-                        Check(labels.Any(label=>label.text=="0:12"),"CVT time axis displays elapsed chart duration");
+                        Check(labels.Any(label=>label.text=="100%") && labels.Any(label=>label.text=="75%")
+                            && labels.Any(label=>label.text=="50%") && labels.Any(label=>label.text=="25%")
+                            && labels.Any(label=>label.text=="0%"),"CVT chart shows the reference percentage grid");
                         var timeline=page.GetComponentsInChildren<RectTransform>(true).First(rect=>rect.name=="AccuracyTimeline" && rect.gameObject.activeInHierarchy);
-                        var points=timeline.GetComponentsInChildren<RectTransform>(true).Where(rect=>rect.name.StartsWith("Point ",StringComparison.Ordinal)).ToArray();
-                        var ordered=points.OrderBy(rect=>rect.anchorMin.x).ToArray();
-                        Check(points.Length<32 && ordered.Zip(ordered.Skip(1),(left,right)=>left.anchorMax.x<right.anchorMin.x-.0001f).Any(gap=>gap),
-                            "CVT chart omits empty periods and retains their real time gap");
+                        var scatter=ReplayAnalysisView.TestPlots.Single(plot=>plot.Id=="CVT:Baka");
+                        Check(scatter.Points.Count==32 && !scatter.ConnectPoints && Math.Abs(scatter.Points[0].X-5000)<.001
+                            && Math.Abs(scatter.Points[^1].X-17750)<.001 && ReplayPlotTexture.NormalPointRadius==2.2f,
+                            "CVT chart draws one fine, unconnected point per object at source timestamps");
+                        Check(timeline.GetComponentInChildren<RawImage>(true).texture,
+                            "CVT scatter graph renders to a single native image");
                     }
                     Canvas.ForceUpdateCanvases();captureCamera.Render();RenderTexture.active=captureCamera.targetTexture;
                     var bitmap=new Texture2D(Width,Height,TextureFormat.RGB24,false);bitmap.ReadPixels(new Rect(0,0,Width,Height),0,0);bitmap.Apply();

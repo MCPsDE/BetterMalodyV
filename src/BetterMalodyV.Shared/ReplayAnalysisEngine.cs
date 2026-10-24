@@ -432,7 +432,7 @@ public static class ReplayAnalysisEngine
         var accuracy = objects.Count == 0 ? 0 : objects.Average(item => item.Accuracy);
         var misses = objects.Count(item => item.Accuracy == 0);
         var headErrors = heads.Values.ToArray();
-        var timeline = BuildProfilePoints(objects);
+        var points = BuildProfilePoints(objects);
         return new(
             profile.Group,
             profile.Label,
@@ -441,40 +441,13 @@ public static class ReplayAnalysisEngine
             misses,
             headErrors.Length == 0 ? 0 : headErrors.Average(),
             profile.WindowLabel,
-            timeline.StartMs,
-            timeline.EndMs,
-            timeline.Points);
+            points);
     }
 
-    private sealed record ProfileTimeline(double StartMs, double EndMs, IReadOnlyList<ReplayProfilePoint> Points);
-
-    private static ProfileTimeline BuildProfilePoints(IReadOnlyList<ScoredObject> objects)
-    {
-        if (objects.Count == 0) return new(0, 0, Array.Empty<ReplayProfilePoint>());
-        const int maxPointCount = 64;
-        var ordered = objects.OrderBy(item => item.TimeMs).ToArray();
-        var first = ordered[0].TimeMs;
-        var last = ordered[^1].TimeMs;
-        if (last <= first)
-            return new(first, last, new[] { new ReplayProfilePoint(first, last, ordered.Average(item => item.Accuracy), ordered.Length) });
-        var pointCount = Math.Min(maxPointCount, ordered.Length);
-        var buckets = new (double Sum, int Count)[pointCount];
-        foreach (var item in ordered)
-        {
-            var index = Math.Min(pointCount - 1, (int)((item.TimeMs - first) / (last - first) * pointCount));
-            buckets[index].Sum += item.Accuracy;
-            buckets[index].Count++;
-        }
-        var points = buckets.Select((bucket, index) => (bucket, index))
-            .Where(item => item.bucket.Count > 0)
-            .Select(item => new ReplayProfilePoint(
-                first + (last - first) * item.index / pointCount,
-                item.index == pointCount - 1 ? last : first + (last - first) * (item.index + 1) / pointCount,
-                item.bucket.Sum / item.bucket.Count,
-                item.bucket.Count))
+    private static IReadOnlyList<ReplayProfilePoint> BuildProfilePoints(IReadOnlyList<ScoredObject> objects) =>
+        objects.OrderBy(item => item.TimeMs)
+            .Select(item => new ReplayProfilePoint(item.TimeMs, item.Accuracy))
             .ToArray();
-        return new(first, last, points);
-    }
 
     private static double ProfileAccuracy(Profile profile, double error, double releaseScale = 1)
     {
