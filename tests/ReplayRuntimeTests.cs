@@ -5,6 +5,7 @@ using Malody.Chart;
 using Malody.DB;
 using Malody.Play;
 using UnityEngine;
+using UnityEngine.UI;
 using HarmonyLib;
 
 namespace BetterMalodyV.Plugin;
@@ -82,6 +83,20 @@ internal static class ReplayRuntimeTests
             check(analyzed.Analysis.ChartNoteCount==2 && analyzed.Analysis.Tracks.Count==4,$"Analysis parses a temporary chart copy and reads track note data: notes={analyzed.Analysis.ChartNoteCount}, tracks={analyzed.Analysis.Tracks.Count}");
             var baka=owner.AnalysisApi.AnalyzeBaka(file);
             check(baka is not null && !baka.Value.TurboTail,"Local replay list uses lowercase baka without Turbo tail judgement");
+            var archiveFile=api.ReplayArchivePath("own-replay-fixture.mrv");
+            Directory.CreateDirectory(Path.GetDirectoryName(archiveFile)!);
+            File.Copy(file,archiveFile,true);
+            var itemRoot=new GameObject("Local replay list item fixture");
+            var item=itemRoot.AddComponent<Malody.Scene.Item.ItemScore>();
+            var row=new GameObject("Local replay row");row.transform.SetParent(itemRoot.transform,false);row.AddComponent<RectTransform>();
+            var accObject=new GameObject("ACC");accObject.transform.SetParent(row.transform,false);var acc=accObject.AddComponent<Text>();item.acc=acc;
+            var queueMethod=typeof(ReplayRunController).GetMethod("QueueBaka",BindingFlags.Instance|BindingFlags.NonPublic)!;
+            queueMethod.Invoke(owner,new object?[]{item,new ScoreRecord{ReplayFile="own-replay-fixture.mrv"}});
+            var processMethod=typeof(ReplayRunController).GetMethod("ProcessBakaQueue",BindingFlags.Instance|BindingFlags.NonPublic)!;
+            processMethod.Invoke(owner,null);
+            var label=itemRoot.transform.Find("Local replay row/BetterMalodyV.BakaAccuracy")?.GetComponent<Text>();
+            check(label is not null && label.gameObject.activeSelf && label.text.EndsWith("%"),"Local score list item shows the blue Baka accuracy beside ACC");
+            UnityEngine.Object.Destroy(itemRoot);
             var turbo=ReplayFile.Parser.ParseFrom(Google.Protobuf.MessageExtensions.ToByteArray(replay.Cast<Google.Protobuf.IMessage>()).ToArray());
             turbo.Score.Custom="E";turbo.Judge=new ReplayFile.Types.Judge{JudgeAtEnd=true};
             var turboFile=Path.Combine(BepInEx.Paths.GameRootPath,"turbo-baka-fixture.mrv");

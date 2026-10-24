@@ -83,20 +83,27 @@ public sealed class ReplayRunController : MonoBehaviour
         }
         ProcessBakaQueue();
         if(Time.unscaledTime<nextScan)return;nextScan=Time.unscaledTime+.5f;
+        foreach(var item in UnityEngine.Object.FindObjectsOfType<ItemScore>())
+            try
+            {
+                var data=item.GetType().GetProperty("AssignObject",BindingFlags.Instance|BindingFlags.Public|BindingFlags.NonPublic)?.GetValue(item);
+                QueueBaka(item,data);
+            }
+            catch(Exception ex) { Plugin.Current.LogRoom("Replay Baka list scan skipped: "+ex.GetBaseException().Message); }
         foreach(var panel in UnityEngine.Object.FindObjectsOfType<PanelScoreDetail>())
             try {Attach(panel);}catch(Exception ex){Plugin.Current.LogRoom("Replay action unavailable: "+ex.GetBaseException().Message);}
     }
     private static void LocalShown(PanelScoreDetail __instance)
     {try {Current?.Attach(__instance);}catch(Exception ex){Plugin.Current.LogRoom("Replay action: "+ex.GetBaseException().Message);}}
 
-    private static void ScoreFilled(ItemScore __instance,object __1)
+    private static void ScoreFilled(ItemScore __instance,object? __1)
     {
         try {Current?.QueueBaka(__instance,__1);}
         catch(Exception ex) {Plugin.Current.LogRoom("Replay Baka label unavailable: "+ex.GetBaseException().Message);}
     }
 
     [Il2CppInterop.Runtime.Attributes.HideFromIl2Cpp]
-    private void QueueBaka(ItemScore item,object data)
+    private void QueueBaka(ItemScore item,object? data)
     {
         var label=EnsureBakaLabel(item);
         if(!item || label is null)return;
