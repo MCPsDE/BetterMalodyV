@@ -86,7 +86,8 @@ public sealed class ReplayRunController : MonoBehaviour
         foreach(var item in UnityEngine.Object.FindObjectsOfType<ItemScore>())
             try
             {
-                QueueBaka(item,AssignedData(item));
+                var data=AssignedData(item);
+                if(data is ScoreRecord)QueueBaka(item,data);
             }
             catch(Exception ex) { Plugin.Current.LogRoom("Replay Baka list scan skipped: "+ex.GetBaseException().Message); }
         foreach(var panel in UnityEngine.Object.FindObjectsOfType<PanelScoreDetail>())
@@ -95,9 +96,9 @@ public sealed class ReplayRunController : MonoBehaviour
     private static void LocalShown(PanelScoreDetail __instance)
     {try {Current?.Attach(__instance);}catch(Exception ex){Plugin.Current.LogRoom("Replay action: "+ex.GetBaseException().Message);}}
 
-    private static void ScoreFilled(ItemScore __instance)
+    private static void ScoreFilled(ItemScore __instance,object? __1)
     {
-        try {Current?.QueueBaka(__instance,AssignedData(__instance));}
+        try {Current?.QueueBaka(__instance,__1);}
         catch(Exception ex) {Plugin.Current.LogRoom("Replay Baka label unavailable: "+ex.GetBaseException().Message);}
     }
 
