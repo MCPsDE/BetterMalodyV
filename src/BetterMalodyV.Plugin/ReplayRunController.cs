@@ -151,7 +151,8 @@ public sealed class ReplayRunController : MonoBehaviour
 
     private static void ApplyBaka(Text label,(double Accuracy,bool TurboTail)? result)
     {
-        label.gameObject.SetActive(result is not null);if(result is null)return;
+        label.gameObject.SetActive(true);
+        if(result is null){label.text="—";label.color=BakaColor;return;}
         label.text=(result.Value.Accuracy*100).ToString("0.00",CultureInfo.InvariantCulture)+"%";
         label.color=BakaColor;
     }
@@ -162,15 +163,15 @@ public sealed class ReplayRunController : MonoBehaviour
         var existing=source.transform.parent.Find(labelName)?.GetComponent<Text>();
         if(existing is not null)return existing;
         var go=new GameObject(labelName);go.layer=source.gameObject.layer;
-        var label=go.AddComponent<Text>();label.font=source.font;label.fontSize=source.fontSize;label.fontStyle=source.fontStyle;
-        label.alignment=TextAnchor.MiddleRight;label.horizontalOverflow=HorizontalWrapMode.Overflow;
+        var label=go.AddComponent<Text>();label.font=source.font;label.fontSize=Mathf.Max(18,Mathf.RoundToInt(source.fontSize*.45f));label.fontStyle=source.fontStyle;
+        label.alignment=TextAnchor.MiddleCenter;label.horizontalOverflow=HorizontalWrapMode.Overflow;
         label.verticalOverflow=VerticalWrapMode.Truncate;label.raycastTarget=false;label.supportRichText=source.supportRichText;
         label.resizeTextForBestFit=source.resizeTextForBestFit;label.resizeTextMinSize=source.resizeTextMinSize;
         label.resizeTextMaxSize=source.resizeTextMaxSize;label.color=BakaColor;
         var rect=go.GetComponent<RectTransform>();rect.SetParent(source.transform.parent,false);
         var sourceRect=source.rectTransform;rect.anchorMin=sourceRect.anchorMin;rect.anchorMax=sourceRect.anchorMax;
-        rect.pivot=new Vector2(1,sourceRect.pivot.y);rect.sizeDelta=new Vector2(Math.Max(88,sourceRect.sizeDelta.x*.58f),sourceRect.sizeDelta.y);
-        rect.anchoredPosition=sourceRect.anchoredPosition+new Vector2(sourceRect.sizeDelta.x/2+8,0);label.gameObject.SetActive(false);return label;
+        rect.pivot=new Vector2(.5f,1);rect.sizeDelta=new Vector2(Mathf.Max(110,sourceRect.sizeDelta.x*.65f),30);
+        rect.anchoredPosition=sourceRect.anchoredPosition+new Vector2(0,-sourceRect.sizeDelta.y-6);label.gameObject.SetActive(false);return label;
     }
     [Il2CppInterop.Runtime.Attributes.HideFromIl2Cpp]
     internal Button? Attach(PanelScoreDetail panel)
