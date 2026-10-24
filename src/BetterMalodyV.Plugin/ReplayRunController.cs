@@ -1,8 +1,10 @@
+using System.Globalization;
 using System.Reflection;
 using HarmonyLib;
 using Malody.DB;
 using Malody.Play;
 using Malody.Scene;
+using Malody.Scene.Item;
 using Malody.Scene.Panel;
 using TMPro;
 using UnityEngine;
@@ -21,7 +23,15 @@ public sealed class ReplayRunController : MonoBehaviour
     private Run? run;
     private float nextScan;
     private float nextAccountCheck;
+    private float nextBaka;
     private string? failure;
+    private const string BakaLabelName="BetterMalodyV.BakaAccuracy";
+    private static readonly Color BakaColor=new(.32f,.68f,1f,1f);
+    private readonly Queue<BakaJob> bakaQueue=new();
+    private readonly HashSet<string> queuedBaka=new(StringComparer.OrdinalIgnoreCase);
+    private readonly Dictionary<string,(double Accuracy,bool TurboTail)?> bakaCache=new(StringComparer.OrdinalIgnoreCase);
+    private readonly Dictionary<int,string> itemBakaPaths=new();
+    private sealed record BakaJob(ItemScore Item,int InstanceId,string Path);
     private sealed class Run(object info,ReplayFile replay,ReplayFile inputs,uint user)
     {
         internal readonly object Info=info;
@@ -46,6 +56,7 @@ public sealed class ReplayRunController : MonoBehaviour
         try
         {
             Patch(typeof(PanelScoreDetail).GetMethod("Show",new[]{typeof(ScoreRecord)})!,nameof(LocalShown),true);
+            Patch(typeof(ItemScore).GetMethod("Fill")!,nameof(ScoreFilled),true);
             Patch(typeof(ChartPlayer).GetMethod("Load")!,nameof(Loading));
             Patch(Api.InputTick,nameof(TickBefore));Patch(Api.InputReset,nameof(ResetAfter),true);Patch(Api.ResetRandom,nameof(RandomAfter),true);
             foreach(var method in Api.PhysicalInputs)Patch(method,nameof(PhysicalBefore));
@@ -70,12 +81,75 @@ public sealed class ReplayRunController : MonoBehaviour
             if(scene=="ScenePlay")run.SeenPlay=true;
             else if(run.SeenPlay || Time.unscaledTime-run.Started>45)run=null;
         }
+        ProcessBakaQueue();
         if(Time.unscaledTime<nextScan)return;nextScan=Time.unscaledTime+.5f;
         foreach(var panel in UnityEngine.Object.FindObjectsOfType<PanelScoreDetail>())
             try {Attach(panel);}catch(Exception ex){Plugin.Current.LogRoom("Replay action unavailable: "+ex.GetBaseException().Message);}
     }
     private static void LocalShown(PanelScoreDetail __instance)
     {try {Current?.Attach(__instance);}catch(Exception ex){Plugin.Current.LogRoom("Replay action: "+ex.GetBaseException().Message);}}
+
+    private static void ScoreFilled(ItemScore __instance,object __1)
+    {
+        try {Current?.QueueBaka(__instance,__1);}
+        catch(Exception ex) {Plugin.Current.LogRoom("Replay Baka label unavailable: "+ex.GetBaseException().Message);}
+    }
+
+    [Il2CppInterop.Runtime.Attributes.HideFromIl2Cpp]
+    private void QueueBaka(ItemScore item,object data)
+    {
+        var label=EnsureBakaLabel(item);
+        if(!item || label is null)return;
+        var instanceId=item.GetInstanceID();
+        if(data is not ScoreRecord record || string.IsNullOrWhiteSpace(record.ReplayFile))
+        {
+            itemBakaPaths.Remove(instanceId);label.gameObject.SetActive(false);return;
+        }
+        var path=Api.ReplayArchivePath(record.ReplayFile);
+        itemBakaPaths[instanceId]=path;label.gameObject.SetActive(true);label.color=BakaColor;
+        if(bakaCache.TryGetValue(path,out var cached)){ApplyBaka(label,cached);return;}
+        label.text="…";
+        if(queuedBaka.Add(path))bakaQueue.Enqueue(new(item,instanceId,path));
+    }
+
+    [Il2CppInterop.Runtime.Attributes.HideFromIl2Cpp]
+    private void ProcessBakaQueue()
+    {
+        if(Time.unscaledTime<nextBaka || bakaQueue.Count==0)return;
+        nextBaka=Time.unscaledTime+.06f;
+        var job=bakaQueue.Dequeue();queuedBaka.Remove(job.Path);
+        (double Accuracy,bool TurboTail)? result=null;
+        try {result=AnalysisApi.AnalyzeBaka(job.Path);}
+        catch(Exception ex){Plugin.Current.LogRoom("Replay Baka analysis skipped: "+ex.GetBaseException().Message);}
+        bakaCache[job.Path]=result;
+        if(!itemBakaPaths.TryGetValue(job.InstanceId,out var current)
+            || !string.Equals(current,job.Path,StringComparison.OrdinalIgnoreCase))return;
+        var label=EnsureBakaLabel(job.Item);if(label is not null)ApplyBaka(label,result);
+    }
+
+    private static void ApplyBaka(Text label,(double Accuracy,bool TurboTail)? result)
+    {
+        label.gameObject.SetActive(result is not null);if(result is null)return;
+        label.text=(result.Value.Accuracy*100).ToString("0.00",CultureInfo.InvariantCulture)+"%";
+        label.color=BakaColor;
+    }
+
+    private static Text? EnsureBakaLabel(ItemScore item)
+    {
+        if(!item || !item.acc)return null;
+        var existing=item.acc.transform.parent.Find(BakaLabelName)?.GetComponent<Text>();
+        if(existing is not null)return existing;
+        var source=item.acc;var go=new GameObject(BakaLabelName);go.layer=source.gameObject.layer;
+        var label=go.AddComponent<Text>();label.font=source.font;label.fontSize=source.fontSize;label.fontStyle=source.fontStyle;
+        label.alignment=TextAnchor.MiddleRight;label.horizontalOverflow=HorizontalWrapMode.Overflow;
+        label.verticalOverflow=VerticalWrapMode.Truncate;label.raycastTarget=false;label.supportRichText=source.supportRichText;
+        label.resizeTextForBestFit=source.resizeTextForBestFit;label.resizeTextMinSize=source.resizeTextMinSize;
+        label.resizeTextMaxSize=source.resizeTextMaxSize;label.color=BakaColor;
+        var rect=go.GetComponent<RectTransform>();rect.SetParent(source.transform.parent,false);
+        var sourceRect=source.rectTransform;rect.anchorMin=sourceRect.anchorMin;rect.anchorMax=sourceRect.anchorMax;
+        rect.pivot=new Vector2(1,sourceRect.pivot.y);rect.sizeDelta=new Vector2(Math.Max(88,sourceRect.sizeDelta.x*.58f),sourceRect.sizeDelta.y);
+        rect.anchoredPosition=sourceRect.anchoredPosition+new Vector2(-8,0);label.gameObject.SetActive(false);return label;
+    }
     [Il2CppInterop.Runtime.Attributes.HideFromIl2Cpp]
     internal Button? Attach(PanelScoreDetail panel)
     {

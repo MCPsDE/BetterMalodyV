@@ -19,9 +19,13 @@ public static class ReplayAnalysisEngine
     private sealed record MatchedNote(int NoteIndex, double Error);
     private sealed record ScoredObject(double TimeMs, double Accuracy);
 
-    private static readonly double[] OffsetBounds = Enumerable.Range(0, 19).Select(i => -180d + i * 20).ToArray();
-    private static readonly double[] DurationBounds = { 0, 20, 40, 60, 80, 100, 150, 200, 300, 500, double.PositiveInfinity };
-    private static readonly double[] IntervalBounds = { 0, 50, 75, 100, 125, 150, 200, 300, 500, 1000, double.PositiveInfinity };
+    // Fine bins keep the raster plot faithful to the recorded distribution instead of
+    // collapsing most hits into a handful of wide columns.
+    private static readonly double[] OffsetBounds = Enumerable.Range(0, 73).Select(i => -180d + i * 5).ToArray();
+    private static readonly double[] DurationBounds = Enumerable.Range(0, 51).Select(i => i * 10d)
+        .Append(double.PositiveInfinity).ToArray();
+    private static readonly double[] IntervalBounds = Enumerable.Range(0, 101).Select(i => i * 10d)
+        .Append(double.PositiveInfinity).ToArray();
 
     public static ReplayAnalysisResult Analyze(
         IReadOnlyList<ReplayChartNote> chartNotes,

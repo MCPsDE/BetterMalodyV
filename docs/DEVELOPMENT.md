@@ -21,20 +21,22 @@
 
 1.3.2 按 MalodySite Canvas 点图重画 CVT：每个评分对象一个圆点、零分红点和五条百分比网格；其他分布改为细线与圆点。托管分析 21 项通过；两种原生分辨率各通过 163 项。
 
+1.3.3 将偏移、按压时长和间隔图细分为 5–10 ms 采样并提高图高；本地回放列表在 ACC 左侧显示小写 `baka` 或 Turbo 尾判对应的 `baka-e` 准确率。托管分析 23 项通过；两种原生分辨率各通过 166 项。
+
 replay-action 两张真实预制体捕获中的 123456 / 98.5% 为合成详情数据。完整会话的暂停/继续仅经源码审查，reset/seek 断言不代表该流程通过；未完成整谱重演、真实排行榜写入或服务端接受测试，也没有真实双账号联机或物理多屏 DPI 验证。
 
 ## 手动发布补丁版
 
 仅修改自己的管理面板说明时，编辑游戏目录下 `BetterMalodyV/docs/FEATURES.md` 并按 F5 即可，无需打包。向其他用户发布则编辑仓库 `docs/FEATURES.md`；升级仍会保留他们手动修改过的安装副本。
 
-以下以从 1.3.2 发布下一个补丁版 1.3.3 为例，在仓库根目录执行；先将 `Directory.Build.props` 的 Version、`src/BetterMalodyV.Plugin/Plugin.cs` 的 BepInPlugin 版本都改为 `1.3.3`，并把 README.md 的安装器文件名改为 `BetterMalodyV-Setup-1.3.3.exe`。
+以下以从 1.3.3 发布下一个补丁版 1.3.4 为例，在仓库根目录执行；先将 `Directory.Build.props` 的 Version、`src/BetterMalodyV.Plugin/Plugin.cs` 的 BepInPlugin 版本都改为 `1.3.4`，并把 README.md 的安装器文件名改为 `BetterMalodyV-Setup-1.3.4.exe`。
 
 ```powershell
 pwsh -NoProfile -File scripts/build-release.ps1
 pwsh -NoProfile -File scripts/test-package.ps1
 git diff -- docs/FEATURES.md Directory.Build.props src/BetterMalodyV.Plugin/Plugin.cs README.md
 git add -- docs/FEATURES.md Directory.Build.props src/BetterMalodyV.Plugin/Plugin.cs README.md
-git commit -m "Release 1.3.3"
+git commit -m "Release 1.3.4"
 git push origin main
 pwsh -NoProfile -File scripts/publish-github-release.ps1 -SkipBuild
 ```

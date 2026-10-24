@@ -61,6 +61,28 @@ internal sealed class ReplayGameApi
         get {var self=Call(RoomGameApi.Singleton(onlineInfo),"get_Self")!;return Convert.ToUInt32(self.GetType().GetProperties(Any).Single(p=>p.PropertyType==typeof(uint)).GetValue(self));}
     }
     internal string? LocalPath(PanelScoreDetail panel)=>(string?)localPath.GetValue(panel);
+    internal string ReplayArchivePath(string replayFile)
+    {
+        var getPath=AppDomain.CurrentDomain.GetAssemblies()
+            .SelectMany(assembly=>
+            {
+                try { return assembly.GetTypes(); }
+                catch { return Array.Empty<Type>(); }
+            })
+            .SelectMany(type=>type.GetMethods(Any))
+            .FirstOrDefault(method=>method.Name=="GetMaPath" && method.ReturnType==typeof(string)
+                && method.GetParameters().Length==1)
+            ?? throw new NotSupportedException("当前游戏缺少回放目录配置接口。");
+        var configType=getPath.DeclaringType!;
+        var pathType=getPath.GetParameters()[0].ParameterType;
+        var getGlobal=configType.GetMethods(Any).FirstOrDefault(method=>method.Name=="get_G" && method.IsStatic)
+            ?? configType.BaseType?.GetMethods(Any).FirstOrDefault(method=>method.Name=="get_G" && method.IsStatic);
+        var config=getGlobal?.Invoke(null,null)
+            ?? throw new NotSupportedException("当前游戏配置尚未初始化。");
+        var root=(string?)getPath.Invoke(config,new[]{Enum.Parse(pathType,"ReplayArchive")})
+            ?? throw new NotSupportedException("当前游戏回放目录为空。");
+        return Path.GetFullPath(Path.Combine(root,replayFile));
+    }
     internal static object? Call(object value,string method,params object?[] args)=>value.GetType().GetMethod(method,Any)!.Invoke(value,args);
     private static object? CallStatic(Type type,string method,params object?[] args)=>type.GetMethod(method,Any)!.Invoke(null,args);
     internal static bool Same(object? a,object? b)=>a is Il2CppObjectBase x && b is Il2CppObjectBase y && x.Pointer==y.Pointer;

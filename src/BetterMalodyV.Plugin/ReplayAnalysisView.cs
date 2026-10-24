@@ -229,7 +229,7 @@ internal static class ReplayAnalysisView
         AddSection(page, Text("逐轨偏移", "Offset by track"));
         AddText(page, Text("正值表示偏晚，负值表示偏早；总偏移为逐击偏移之和。", "Positive values are late, negative values are early; total offset is the sum of hit errors."), 14, FontStyles.Normal, MutedColor, 42, true);
         var columns = Screen.width < 1500 ? 1 : 2;
-        var grid = Grid(page, columns, columns == 1 ? 1400 : 680, 426, 16);
+        var grid = Grid(page, columns, columns == 1 ? 1400 : 680, 510, 16);
         foreach (var track in session.Analysis.Tracks)
         {
             var card = Panel(grid.transform, "Track " + (track.Lane + 1), SurfaceColor);
@@ -266,7 +266,7 @@ internal static class ReplayAnalysisView
 
         AddSection(page, Text("逐轨按压", "Presses by track"));
         var columns = Screen.width < 1500 ? 1 : 2;
-        var grid = Grid(page.transform, columns, columns == 1 ? 1400 : 680, 470, 16);
+        var grid = Grid(page.transform, columns, columns == 1 ? 1400 : 680, 560, 16);
         foreach (var track in analysis.Tracks)
         {
             var card = Panel(grid.transform, "Press track " + (track.Lane + 1), SurfaceColor);
@@ -393,13 +393,13 @@ internal static class ReplayAnalysisView
     {
         var block = Block(parent, title, 14, 14, 14, 14, 7);
         AddText(block.transform, title, 16, FontStyles.Bold, InkColor, 25);
-        AddHistogram(block.transform, histogram, signed, 148, plotId);
+        AddHistogram(block.transform, histogram, signed, 240, plotId);
     }
 
     private static void AddCompactHistogram(Transform parent, string title, ReplayHistogram histogram, bool signed, string plotId)
     {
         AddText(parent, title, 13, FontStyles.Normal, MutedColor, 20);
-        AddHistogram(parent, histogram, signed, 72, plotId);
+        AddHistogram(parent, histogram, signed, 156, plotId);
     }
 
     private static void AddHistogram(Transform parent, ReplayHistogram histogram, bool signed, float height, string plotId)

@@ -153,12 +153,12 @@ public sealed class RuntimeVerification : MonoBehaviour
                         var histograms=page.GetComponentsInChildren<RectTransform>(true).Where(rect=>rect.name=="Histogram" && rect.gameObject.activeInHierarchy).ToArray();
                         Check(histograms.Length>=2,"Duration and interval histograms are rendered");
                         var durationPlot=ReplayAnalysisView.TestPlots.Single(plot=>plot.Id=="PressDuration");
-                        Check(durationPlot.Points.Count==10 && durationPlot.Points.Any(point=>Math.Abs(point.X-70)<.001)
-                            && durationPlot.MaximumX==700 && durationPlot.ConnectPoints,
-                            "Duration distribution uses a connected point plot at the 60-80 ms bin center");
+                        Check(durationPlot.Points.Count==51 && durationPlot.Points.Any(point=>Math.Abs(point.X-75)<.001)
+                            && durationPlot.MaximumX==510 && durationPlot.ConnectPoints,
+                            "Duration distribution uses fine 10 ms point sampling");
                         var intervalPlot=ReplayAnalysisView.TestPlots.Single(plot=>plot.Id=="PressInterval");
-                        Check(intervalPlot.Points.Any(point=>Math.Abs(point.X-1250)<.001) && intervalPlot.MaximumX==1500,
-                            "Interval overflow is drawn at its documented representative midpoint");
+                        Check(intervalPlot.Points.Any(point=>Math.Abs(point.X-1005)<.001) && intervalPlot.MaximumX==1010,
+                            "Interval overflow is drawn at its fine representative midpoint");
                         Check(histograms.All(graph=>graph.GetComponentInChildren<RawImage>(true).texture),
                             "Distribution plots render as native raster textures");
                     }

@@ -52,19 +52,24 @@ internal static class ReplayAnalysisTests
         Check(small.Judgements.Best == 1 && small.Judgements.Late == 1, "Separates timing flags from judgement counts");
         Check(small.Presses.DurationDistribution.Bins.Sum(bin => bin.Count) == 2, "Bins completed press durations");
         Check(small.Presses.DurationDistribution.Bins.Single(bin => bin.Start == 20).Count == 1
-            && small.Presses.DurationDistribution.Bins.Single(bin => bin.Start == 40).Count == 1,
-            "Duration histogram retains unequal numeric bin boundaries");
-        Check(small.Presses.IntervalDistribution.Bins.Single(bin => bin.Start == 500).Count == 1,
-            "Press interval is assigned to its real 500-1000 ms range");
+            && small.Presses.DurationDistribution.Bins.Single(bin => bin.Start == 50).Count == 1
+            && small.Presses.DurationDistribution.Bins.Count >= 50,
+            "Duration histogram retains fine 10 ms sampling");
+        Check(small.Presses.IntervalDistribution.Bins.Single(bin => bin.Start == 980).Count == 1,
+            "Press interval is assigned to its fine numeric range");
         var hold = ReplayAnalysisEngine.Analyze(
             new[] { new ReplayChartNote(1000, 0, 2000) },
             new[] { new ReplayInputAction(1000, 0, true), new ReplayInputAction(2110, 0, false) },
             Array.Empty<ReplayHitEvent>(),
             1);
         var baka = hold.Profiles.Single(profile => profile.Label == "Baka");
+        var bakaSmall = hold.Profiles.Single(profile => profile.Label == "baka");
         var bakaTail = hold.Profiles.Single(profile => profile.Label == "Baka-e");
+        var bakaTailSmall = hold.Profiles.Single(profile => profile.Label == "baka-e");
         Check(baka.Objects == 1 && Math.Abs(baka.Accuracy - 1) < .001, "Baka excludes hold-tail score objects");
+        Check(bakaSmall.Objects == 1 && Math.Abs(bakaSmall.Accuracy - 1) < .001, "Lowercase baka profile excludes hold-tail score objects");
         Check(bakaTail.Objects == 2 && Math.Abs(bakaTail.Accuracy - .5) < .001, "Baka-e scores a separate hold tail");
+        Check(bakaTailSmall.Objects == 2 && Math.Abs(bakaTailSmall.Accuracy - .5) < .001, "Lowercase baka-e scores a separate hold tail");
 
         var sparse = ReplayAnalysisEngine.Analyze(
             new[] { new ReplayChartNote(0, 0), new ReplayChartNote(10, 0), new ReplayChartNote(10000, 0) },

@@ -103,6 +103,19 @@ internal sealed class ReplayAnalysisGameApi(ReplayGameApi replayApi)
             analysis);
     }
 
+    internal (double Accuracy, bool TurboTail)? AnalyzeBaka(string replayPath)
+    {
+        var replay = replayApi.Read(replayPath);
+        var session = Analyze(replayPath);
+        var turboTail = replay.Judge?.JudgeAtEnd == true || HasTurboTail(replay.Score?.Custom);
+        var label = turboTail ? "baka-e" : "baka";
+        var profile = session.Analysis.Profiles.FirstOrDefault(item => item.Label == label);
+        return profile is null ? null : (profile.Accuracy, turboTail);
+    }
+
+    private static bool HasTurboTail(string? custom) => !string.IsNullOrWhiteSpace(custom)
+        && custom.Split('/').Any(value => value.Equals("E", StringComparison.OrdinalIgnoreCase));
+
     private static object ParseUncachedChart(object cachedChart)
     {
         var parserType = ResolveParserType();
