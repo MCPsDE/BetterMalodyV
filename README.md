@@ -8,7 +8,7 @@ Windows x64 / BepInEx 6 IL2CPP 版 Malody V 优化插件。
 - 回放重演与分析：可重演本人回放重新上传，或打开全屏分析页查看偏移、轨道、按压与 CVT 估分，并在本地回放列表显示小写 baka 或 baka-e 准确率。
 - 自动更新：游戏启动及每 30 分钟检查新版，游戏内弹窗显示下载进度，校验后等待本局结束、安装并自动重启。
 
-[下载安装器](https://github.com/MCPsDE/BetterMalodyV/releases/latest)，退出游戏后运行 `BetterMalodyV-Setup-1.3.4.exe` 安装；后续升级无需打开管理面板。
+[下载安装器](https://github.com/MCPsDE/BetterMalodyV/releases/latest)，退出游戏后运行 `BetterMalodyV-Setup-1.3.5.exe` 安装；后续升级无需打开管理面板。
 
 [功能文档](docs/FEATURES.md) 可直接编辑，管理面板会读取游戏目录下的 `BetterMalodyV/docs/FEATURES.md`；升级保留手动修改过的说明。
 

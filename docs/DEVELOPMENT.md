@@ -25,20 +25,22 @@
 
 1.3.4 修复 LOCAL 成绩列表复用和刷新时遗漏 Baka 标签的问题，并验证蓝色标签实际显示在 ACC 左侧；两种原生分辨率各通过 167 项。
 
+1.3.5 改为从 `ItemScore.AssignObject` 读取 LOCAL 成绩，避免 `Fill` 参数绑定导致 Baka 标签缺失；托管与原生回放验证保持通过。
+
 replay-action 两张真实预制体捕获中的 123456 / 98.5% 为合成详情数据。完整会话的暂停/继续仅经源码审查，reset/seek 断言不代表该流程通过；未完成整谱重演、真实排行榜写入或服务端接受测试，也没有真实双账号联机或物理多屏 DPI 验证。
 
 ## 手动发布补丁版
 
 仅修改自己的管理面板说明时，编辑游戏目录下 `BetterMalodyV/docs/FEATURES.md` 并按 F5 即可，无需打包。向其他用户发布则编辑仓库 `docs/FEATURES.md`；升级仍会保留他们手动修改过的安装副本。
 
-以下以从 1.3.4 发布下一个补丁版 1.3.5 为例，在仓库根目录执行；先将 `Directory.Build.props` 的 Version、`src/BetterMalodyV.Plugin/Plugin.cs` 的 BepInPlugin 版本都改为 `1.3.5`，并把 README.md 的安装器文件名改为 `BetterMalodyV-Setup-1.3.5.exe`。
+以下以从 1.3.5 发布下一个补丁版 1.3.6 为例，在仓库根目录执行；先将 `Directory.Build.props` 的 Version、`src/BetterMalodyV.Plugin/Plugin.cs` 的 BepInPlugin 版本都改为 `1.3.6`，并把 README.md 的安装器文件名改为 `BetterMalodyV-Setup-1.3.6.exe`。
 
 ```powershell
 pwsh -NoProfile -File scripts/build-release.ps1
 pwsh -NoProfile -File scripts/test-package.ps1
 git diff -- docs/FEATURES.md Directory.Build.props src/BetterMalodyV.Plugin/Plugin.cs README.md
 git add -- docs/FEATURES.md Directory.Build.props src/BetterMalodyV.Plugin/Plugin.cs README.md
-git commit -m "Release 1.3.5"
+git commit -m "Release 1.3.6"
 git push origin main
 pwsh -NoProfile -File scripts/publish-github-release.ps1 -SkipBuild
 ```

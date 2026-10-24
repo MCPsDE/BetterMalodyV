@@ -86,8 +86,7 @@ public sealed class ReplayRunController : MonoBehaviour
         foreach(var item in UnityEngine.Object.FindObjectsOfType<ItemScore>())
             try
             {
-                var data=item.GetType().GetProperty("AssignObject",BindingFlags.Instance|BindingFlags.Public|BindingFlags.NonPublic)?.GetValue(item);
-                QueueBaka(item,data);
+                QueueBaka(item,AssignedData(item));
             }
             catch(Exception ex) { Plugin.Current.LogRoom("Replay Baka list scan skipped: "+ex.GetBaseException().Message); }
         foreach(var panel in UnityEngine.Object.FindObjectsOfType<PanelScoreDetail>())
@@ -96,10 +95,22 @@ public sealed class ReplayRunController : MonoBehaviour
     private static void LocalShown(PanelScoreDetail __instance)
     {try {Current?.Attach(__instance);}catch(Exception ex){Plugin.Current.LogRoom("Replay action: "+ex.GetBaseException().Message);}}
 
-    private static void ScoreFilled(ItemScore __instance,object? __1)
+    private static void ScoreFilled(ItemScore __instance)
     {
-        try {Current?.QueueBaka(__instance,__1);}
+        try {Current?.QueueBaka(__instance,AssignedData(__instance));}
         catch(Exception ex) {Plugin.Current.LogRoom("Replay Baka label unavailable: "+ex.GetBaseException().Message);}
+    }
+
+    private static object? AssignedData(ItemScore item)
+    {
+        for(var type=item.GetType();type is not null;type=type.BaseType)
+        {
+            var property=type.GetProperty("AssignObject",BindingFlags.Instance|BindingFlags.Public|BindingFlags.NonPublic);
+            if(property is not null)return property.GetValue(item);
+            var getter=type.GetMethod("get_AssignObject",BindingFlags.Instance|BindingFlags.Public|BindingFlags.NonPublic);
+            if(getter is not null)return getter.Invoke(item,null);
+        }
+        return null;
     }
 
     [Il2CppInterop.Runtime.Attributes.HideFromIl2Cpp]
